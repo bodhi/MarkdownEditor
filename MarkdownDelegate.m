@@ -240,7 +240,7 @@
   NSMutableParagraphStyle *ps;
   ps = [[NSMutableParagraphStyle alloc] init];
 
-  int pointIndent = 10 + level * 18;
+  int pointIndent = 16 + level * 12;
   // 28, 16 => 28, 12
   
   // 0 left edge
@@ -288,81 +288,77 @@
   [storage removeAttribute:NSToolTipAttributeName range:storageRange];
   [storage removeAttribute:MarkdownCodeSection range:storageRange];
   [storage removeAttribute:NSLinkAttributeName range:storageRange];
+  [storage addAttributes:defaultAttributes range:NSMakeRange(0, [storage length])];
   
   NSLog(@"----");
-  NSTextStorage *para = storage;
-    
-  [para beginEditing];
-  [para addAttributes:defaultAttributes range:NSMakeRange(0, [para length])];
 
-  NSString *str = [para string];
-
-  for (OGRegularExpressionMatch *match in [listRegex matchEnumeratorInString:str]) {
+  for (OGRegularExpressionMatch *match in [listRegex matchEnumeratorInAttributedString:storage]) {
     NSString *prefix = [match substringAtIndex:1];
     int indent = [self occurencesOf:@"*" in:prefix] + [self occurencesOf:@"." in:prefix];
-    NSLog(@"indent: %d", indent);
-    [para addAttributes:[self attributesForIndentTo:indent leadOffset:9] range:[match rangeOfMatchedString]];
-    [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+    [storage addAttributes:[self attributesForIndentTo:indent leadOffset:9] range:[match rangeOfMatchedString]];
+    [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
   }
 
-  for (OGRegularExpressionMatch *match in [codeBlockRegex matchEnumeratorInString:str]) {
-    [para addAttributes:codeAttributes range:[match rangeOfMatchedString]];
+  for (OGRegularExpressionMatch *match in [codeBlockRegex matchEnumeratorInAttributedString:storage]) {
+    [storage addAttributes:codeAttributes range:[match rangeOfMatchedString]];
     NSRange content = [match rangeOfSubstringAtIndex:1];
-    [para addAttribute:NSToolTipAttributeName value:[match substringAtIndex:1] range:content];
-    //      NSLog(@"%@", [para string]);
+    [storage addAttribute:NSToolTipAttributeName value:[match substringAtIndex:1] range:content];
+    //      NSLog(@"%@", [storage string]);
   }
     
-  for (OGRegularExpressionMatch *match in [blockquoteRegex matchEnumeratorInString:str]) {
-    if (![self isCodeSection:para atIndex:[match rangeOfMatchedString].location]) {       // don't set attributes in code blocks
-      [para addAttributes:blockquoteAttributes range:[match rangeOfMatchedString]];
-      [para addAttributes:[self attributesForIndentTo:[self occurencesOf:@">" in:[match substringAtIndex:1]] leadOffset:12] range:[match rangeOfMatchedString]];
-      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+  for (OGRegularExpressionMatch *match in [blockquoteRegex matchEnumeratorInAttributedString:storage]) {
+    if (![self isCodeSection:storage atIndex:[match rangeOfMatchedString].location]) {       // don't set attributes in code blocks
+      [storage addAttributes:blockquoteAttributes range:[match rangeOfMatchedString]];
+      [storage addAttributes:[self attributesForIndentTo:[self occurencesOf:@">" in:[match substringAtIndex:1]] leadOffset:12] range:[match rangeOfMatchedString]];
+      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
     }
   }
 
-  for (OGRegularExpressionMatch *match in [header matchEnumeratorInString:str]) {
+  for (OGRegularExpressionMatch *match in [header matchEnumeratorInAttributedString:storage]) {
 //    NSLog(@"matched: %@", [match matchedString]);
     NSRange headerPrefix = [match rangeOfSubstringAtIndex:1];
-    if (![self isCodeSection:para atIndex:headerPrefix.location]) {
+    if (![self isCodeSection:storage atIndex:headerPrefix.location]) {
       NSDictionary *attributes;
       if (headerPrefix.length == 1)
 	attributes = h1Attributes;
       else
 	attributes = h2Attributes;
       
-      [para addAttributes:attributes range:[match rangeOfSubstringAtIndex:2]];
-      [para addAttributes:metaAttributes range:headerPrefix];
-      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+      [storage addAttributes:attributes range:[match rangeOfSubstringAtIndex:2]];
+      [storage addAttributes:metaAttributes range:headerPrefix];
+      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
     }
   }
 
-  for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInString:str]) {
+  for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInAttributedString:storage]) {
     NSRange mRange = [match rangeOfMatchedString];
 //        NSLog(@"%@ %@ %@", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:2]);
     NSDictionary *attribs = nil;
-    if (![self isCodeSection:para atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
-      if ([[match substringAtIndex:1] isEqualToString:@"`"]) { // code span
+    NSString *delimiter = [match substringAtIndex:1];
+    if (![self isCodeSection:storage atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
+      if ([delimiter isEqualToString:@"`"] ||
+	  [delimiter isEqualToString:@"``"]) { // code span
 	attribs = codeAttributes;
-      } else if ([[match substringAtIndex:1] isEqualToString:@"**"] ||
-		 [[match substringAtIndex:1] isEqualToString:@"__"]) { // strong span
+      } else if ([delimiter isEqualToString:@"**"] ||
+		 [delimiter isEqualToString:@"__"]) { // strong span
 	attribs = strongAttributes;
       } else { // em span
 	attribs = emAttributes;
       }
     }
-//        [para addAttribute:NSFontAttributeName value:code range:mRange];
+//        [storage addAttribute:NSFontAttributeName value:code range:mRange];
     if (attribs != nil) {
-      [para addAttributes:attribs range:mRange];
-      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
-      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+      [storage addAttributes:attribs range:mRange];
+      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
     }
   }
  
-  for (OGRegularExpressionMatch *match in [image matchEnumeratorInString:str]) {    
-    [para addAttributes:metaAttributes range:[match rangeOfMatchedString]];
+  for (OGRegularExpressionMatch *match in [image matchEnumeratorInAttributedString:storage]) {    
+    [storage addAttributes:metaAttributes range:[match rangeOfMatchedString]];
   }
      
-  for (OGRegularExpressionMatch *match in [link matchEnumeratorInString:str]) {
+  for (OGRegularExpressionMatch *match in [link matchEnumeratorInAttributedString:storage]) {
     NSRange mRange = [match rangeOfMatchedString];
     NSRange textRange = [match rangeOfSubstringAtIndex:1];
 //	NSLog(@"text: %d %d", textRange.location, textRange.length);
@@ -370,18 +366,14 @@
 //	NSLog(@"url: %d %d", urlRange.location, urlRange.length);
 
     if (urlRange.location != NSNotFound && textRange.location != NSNotFound) {
-      [para addAttributes:metaAttributes range:mRange];
-      [para addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[match substringAtIndex:2]] range:textRange];
+      [storage addAttributes:metaAttributes range:mRange];
+      [storage addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[match substringAtIndex:2]] range:textRange];
     }
   }
-//      [para fixFontAttributeInRange:n];
-//      [para endEditing];
 
   n.location = 0;
   n.length = [storage length];
-  [storage fixFontAttributeInRange:n];
-  [storage fixParagraphStyleAttributeInRange:n];
-//  [storage fixAttributesInRange:storageRange];
+  [storage fixAttributesInRange:storageRange];
   [storage endEditing];
 }
 
