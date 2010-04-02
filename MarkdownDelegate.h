@@ -18,6 +18,7 @@
       *defaultAttributes;
     
     NSString *MarkdownCodeSection;
+    NSString *attachmentChar;
     IBOutlet MarkdownDocument *document;
 }
 

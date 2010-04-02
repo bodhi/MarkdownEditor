@@ -95,27 +95,97 @@
 				     //    [NSColor redColor], NSBackgroundColorAttributeName,
 				     nil
       ] retain];
+
+  NSTextAttachment *a = [[NSTextAttachment alloc] init];
+  attachmentChar = [[[NSAttributedString attributedStringWithAttachment:a] string] retain];
+  [a release];
+}
+
+- (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
+       NSLog(@"Image with src %@", imageSrc);
+       
+       NSError *error;
+//	if (document) 
+//	  NSLog(@"Doc: %@", [document fileURL]);
+       NSURL *url = [NSURL URLWithString:imageSrc relativeToURL:[document fileURL]];
+//	NSLog(@"URL: %@", url);
+       if (url) {
+	 NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
+//	  NSLog(@"Wrapper: %@ error: %@", wrapper, error);
+	 NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
+	 NSAttributedString *imageString = [NSAttributedString attributedStringWithAttachment:img];
+
+	 NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
+	 [target beginEditing];
+	 [target insertAttributedString:imageString atIndex:index];
+	 [target endEditing];
+//	    [img release];
+//	    [wrapper release];
+	 return 1;
+       }
+       return 0;
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
+  NSTextStorage *storage = [aNotification object];
+  NSString *stString = [storage string];
+
   // Image tags:
-  // !\[(.*?)\]\((.*?)\)
+  // !K?\[(.*?)\]\((.*?)\)
   // Explained:
   // !         # image delimiter
+  // K?        # optional attachment char (not k, actually \ufffc)
   // \[(.*?)\] # title
   // \((.*?)\) # url
   NSString *imageMark = @"!";
-  NSString *baseRegex = @"[(.*?)\\]\\((.*?)\\)";
-  OGRegularExpression *image = [OGRegularExpression regularExpressionWithString:@"!\\[(.*?)\\]\\((.*?)\\)"];  
-  OGRegularExpression *attachedImage = [OGRegularExpression regularExpressionWithString:@"!\\[(.*?)\\]\\((.*?)\\)"];  
+  NSString *baseRegex = @"\\[(.*?)\\]\\((.*?)\\)";
+  OGRegularExpression *imageNoAttachment = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"%@%@", imageMark, baseRegex]];
+  OGRegularExpression *attachedImage = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"%@%@%@", imageMark, attachmentChar, baseRegex]];
 
+  // ! with attachment char and no image markup, or attachment char with markup but no leading !
+  OGRegularExpression *attachmentNoImage = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"([^%@]%@%@|%@%@(?!%@))", imageMark, attachmentChar, baseRegex, imageMark, attachmentChar, baseRegex]];
+
+  OGRegularExpressionMatch *match;
+
+  // find attachment with no markup
+  for (match in [attachmentNoImage matchEnumeratorInString:stString]) {
+    // remove attachment
+//    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
+    [storage replaceCharactersInRange:NSMakeRange([match rangeOfMatchedString].location + 1, 1) withString:@""];
+  }
+  
+  // find image with attachment char
+  // Do this before adding attachments so incorrect images get fixed
+  for (match in [attachedImage matchEnumeratorInString:stString]) {
+    NSRange imageRange = [match rangeOfMatchedString];
+//    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
+    int attachmentIndex = imageRange.location + 1;
+    NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentIndex effectiveRange:nil];
+//    NSLog(@"THE ATTACHMENT %@", attachment);
+
+    // validate attachment src
+    if (![[match substringAtIndex:2] isEqualToString:[[attachment fileWrapper] filename]]) {
+      [storage replaceCharactersInRange:NSMakeRange(attachmentIndex, 1) withString:@""];
+//      NSLog(@"attachment different to source, stripped");
+    } else {
+//      NSLog(@"attachment name same as source");
+    }
+  }
 
   // find image markup (without attachment char)
-  // add attachment char with attachment
-  // find ! next to attachment with markup
-  // remove attachment
-  // find image with attachment char
-  // validate attachment src
+  // Do this after removing attachments with incorrect images
+  int attachmentCompensation = 1;
+  for (match in [imageNoAttachment matchEnumeratorInString:stString]) {
+    // add attachment char with attachment
+//    NSLog(@"IMAGE %@", [match matchedString]);
+    NSRange imageRange = [match rangeOfMatchedString];
+
+    int adjustment = 0;
+//    NSLog(@"ATTACHMENT: %@", [match substringAtIndex:2]);
+    adjustment = [self attachImage:[match substringAtIndex:2] toString:storage atIndex:imageRange.location + attachmentCompensation];
+    attachmentCompensation += adjustment;
+  }
+  
 }
 
 - (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
@@ -132,11 +202,6 @@
   OGRegularExpression    *pattern, *link, *image;
 // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
   pattern = [OGRegularExpression regularExpressionWithString:@"(?<!\\\\)([*_`]{1,2})((?!\\1).*?[^\\\\])(\\1)"];
-//pattern = [OGRegularExpression regularExpressionWithString:@"(?<!\\\\)(?<![`*_])([`*_])[^\\s].*?[^\\\\](\\1)"];
-//strong = [OGRegularExpression regularExpressionWithString:@"(?<!\\\\)(\\*\\*|__).*?(?=[^\\\\]).(\\1)"];
-
-//codeEx = [OGRegularExpression regularExpressionWithString:@"(?<=[^\\\\])(`).*?(?=[^\\\\]).(`)"];//(?<!\\)(`).*?(?!\\).(`)"]; 
-//em = [OGRegularExpression regularExpressionWithString:@"(?<!\\*)(\\*)[^\\s\\*]+(\\*)(?!\\*)"];  
 
   // Link tags
   // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
@@ -149,7 +214,7 @@
   //      *?)                 # zero or more of above
   //    \] # end anchor text
   //    \((.*?)\) # capture url
-  link = [OGRegularExpression regularExpressionWithString:@"(?<!!)\\[((?:\\!\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)"];
+  link = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar]];
 
   NSEnumerator    *enumerator;
 
@@ -162,25 +227,13 @@
   [storage removeAttribute:NSToolTipAttributeName range:storageRange];
   [storage removeAttribute:MarkdownCodeSection range:storageRange];
   [storage removeAttribute:NSLinkAttributeName range:storageRange];
-//  [storage removeAttribute:NSAttachmentAttributeName range:storageRange];
-//  [storage removeAttribute:NSAttachmentAttributeName range:storageRange];
   
   NSLog(@"----");
   for (NSTextStorage *para in [storage paragraphs]) {
     [para beginEditing];
     NSRange paraRange = NSMakeRange(0, [para length]);
-    // [para removeAttribute:NSParagraphStyleAttributeName range:paraRange];
-    // [para removeAttribute:NSFontAttributeName range:paraRange];
-    // [para removeAttribute:NSForegroundColorAttributeName range:paraRange];
-    // [para removeAttribute:NSBackgroundColorAttributeName range:paraRange];
-    // [para removeAttribute:NSKernAttributeName range:paraRange];
-    // [para removeAttribute:NSToolTipAttributeName range:paraRange];
-    // [para removeAttribute:MarkdownCodeSection range:paraRange];
-    // [para removeAttribute:NSLinkAttributeName range:paraRange];
-    // [para removeAttribute:NSAttachmentAttributeName range:paraRange];
-    //[para fixAttributesInRange:paraRange];
 
-    for (OGRegularExpressionMatch *match in [[OGRegularExpression regularExpressionWithString:@"!"] matchEnumeratorInString:[para string]]) { 
+    for (OGRegularExpressionMatch *match in [[OGRegularExpression regularExpressionWithString:@"!.."] matchEnumeratorInString:[para string]]) { 
       id attrib = [para attribute:NSAttachmentAttributeName atIndex:[match rangeOfMatchedString].location effectiveRange:nil];
       if (attrib != nil) {
 	NSLog(@"Attach %@ @ %d", attrib, [match rangeOfMatchedString].location);

@@ -37,7 +37,7 @@
 
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError
 {
-  return [[[textView textStorage] string] dataUsingEncoding:NSUTF8StringEncoding];
+  return [[textView string] dataUsingEncoding:NSUTF8StringEncoding];
 
   if ( outError != NULL ) {
     *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:unimpErr userInfo:NULL];
