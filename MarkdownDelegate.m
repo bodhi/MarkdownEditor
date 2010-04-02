@@ -18,12 +18,12 @@
   NSFontManager *fontManager = [NSFontManager sharedFontManager];
   
   NSMutableParagraphStyle *ps;
-  ps = [[NSMutableParagraphStyle alloc] init];
-  [ps setHeadIndent:28];
-  [ps setFirstLineHeadIndent:16];
-  [ps setTailIndent:-28];
+//  ps = [[NSMutableParagraphStyle alloc] init];
+//  [ps setHeadIndent:28];
+//  [ps setFirstLineHeadIndent:16];
+//  [ps setTailIndent:-28];
   blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-					  ps, NSParagraphStyleAttributeName,
+//					  ps, NSParagraphStyleAttributeName,
 						[NSFont fontWithName:@"Georgia-Italic" size:14], NSFontAttributeName,
 					nil
       ] retain];
@@ -99,36 +99,19 @@
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
   attachmentChar = [[[NSAttributedString attributedStringWithAttachment:a] string] retain];
   [a release];
-}
 
-- (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
-       NSLog(@"Image with src %@", imageSrc);
-       
-       NSError *error;
-//	if (document) 
-//	  NSLog(@"Doc: %@", [document fileURL]);
-       NSURL *url = [NSURL URLWithString:imageSrc relativeToURL:[document fileURL]];
-//	NSLog(@"URL: %@", url);
-       if (url) {
-	 NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
-//	  NSLog(@"Wrapper: %@ error: %@", wrapper, error);
-	 NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
-	 NSAttributedString *imageString = [NSAttributedString attributedStringWithAttachment:img];
-
-	 NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
-	 [target beginEditing];
-	 [target insertAttributedString:imageString atIndex:index];
-	 [target endEditing];
-//	    [img release];
-//	    [wrapper release];
-	 return 1;
-       }
-       return 0;
-}
-
-- (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
-  NSTextStorage *storage = [aNotification object];
-  NSString *stString = [storage string];
+  // Lists
+  // /^(?:[\s>]*)(\s*\d+\.\s*|[\s*]*)(.*)$/
+  // Explained:
+  // ^(?:[\s>]*)   # skip over any quoting
+  //   ((?:
+  //   \s*\d+\.\s* # a numeric item
+  //   |           # or
+  //   [\s*]       # an unordered one
+  // )*)           # lots
+  // (.*)
+  // $
+  listRegex = [[OGRegularExpression alloc] initWithString:@"^(?:[\\s>]*)((?:\\s*\\d+\\.\\s*|[\\s*])*)(.*)$"];
 
   // Image tags:
   // !K?\[(.*?)\]\((.*?)\)
@@ -137,20 +120,81 @@
   // K?        # optional attachment char (not k, actually \ufffc)
   // \[(.*?)\] # title
   // \((.*?)\) # url
-  NSString *imageMark = @"!";
-  NSString *baseRegex = @"\\[(.*?)\\]\\((.*?)\\)";
-  OGRegularExpression *imageNoAttachment = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"%@%@", imageMark, baseRegex]];
-  OGRegularExpression *attachedImage = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"%@%@%@", imageMark, attachmentChar, baseRegex]];
+  imageMark = @"!";
+  baseRegex = @"\\[(.*?)\\]\\((.*?)\\)";
+
+  imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@", imageMark, baseRegex]];
+  attachedImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@%@", imageMark, attachmentChar, baseRegex]];
 
   // ! with attachment char and no image markup, or attachment char with markup but no leading !
-  OGRegularExpression *attachmentNoImage = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"([^%@]%@%@|%@%@(?!%@))", imageMark, attachmentChar, baseRegex, imageMark, attachmentChar, baseRegex]];
+  attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"([^%@]%@%@|%@%@(?!%@))", imageMark, attachmentChar, baseRegex, imageMark, attachmentChar, baseRegex]];
+  
+  // ! (optional attachment char) [title] (uri)
+  image = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@?%@", imageMark, attachmentChar, baseRegex]];
+
+  // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
+  inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)([*_`]{1,2})((?!\\1).*?[^\\\\])(\\1)"];
+
+  // Link tags
+  // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
+  // explained: 
+  //    (?<!!)  # doesn't have a ! before the [ (or attachment char)
+  //    \[ # start of anchor text
+  //    (                     # capture...
+  //      (?:\!\[.*?\]\(.*?\) # an image,
+  //      |.)                 # or anything else
+  //      *?)                 # zero or more of above
+  //    \] # end anchor text
+  //    \((.*?)\) # capture url
+  link = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
+
+
+  header = [[OGRegularExpression alloc] initWithString:@"^(?:[\\s>]*)(#+)(.*?)(#*)?$"];
+
+  blockquoteRegex = [[OGRegularExpression alloc] initWithString:@"^((?:\\s*>+\\s*)+)(.*?(?:\\r{2}|\\n{2}|(?:\\r\\n){2}))" options:OgreMultilineOption];
+//  blockquoteRegex = [[OGRegularExpression alloc] initWithString:@"^((?:\\s*>+\\s*)+)(.*)"];
+  codeBlockRegex = [[OGRegularExpression alloc] initWithString:@"^ {4}(.*\r?\n?)"];
+}
+
+- (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
+  NSLog(@"Image with src %@", imageSrc);
+  
+  NSError *error;
+//	if (document) 
+//	  NSLog(@"Doc: %@", [document fileURL]);
+  NSURL *url = [NSURL URLWithString:imageSrc relativeToURL:[document fileURL]];
+  NSLog(@"URL scheme: %@", [url scheme]);
+  if (url && [[url scheme] isEqualToString:@"file"]) {
+    NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
+    if (wrapper) {
+      NSLog(@"Wrapper: %@ error: %@", wrapper, error);
+      NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
+      NSAttributedString *imageString = [NSAttributedString attributedStringWithAttachment:img];
+      
+      NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
+      [target beginEditing];
+      [target insertAttributedString:imageString atIndex:index];
+      [target endEditing];
+      [img release];
+      [wrapper release];
+    } else {
+      NSLog(@"No file for %@", url);
+    }
+    return 1;
+  }
+  return 0;
+}
+
+- (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
+  NSTextStorage *storage = [aNotification object];
+  NSString *stString = [storage string];
 
   OGRegularExpressionMatch *match;
 
   // find attachment with no markup
   for (match in [attachmentNoImage matchEnumeratorInString:stString]) {
     // remove attachment
-//    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
+    //    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
     [storage replaceCharactersInRange:NSMakeRange([match rangeOfMatchedString].location + 1, 1) withString:@""];
   }
   
@@ -158,17 +202,17 @@
   // Do this before adding attachments so incorrect images get fixed
   for (match in [attachedImage matchEnumeratorInString:stString]) {
     NSRange imageRange = [match rangeOfMatchedString];
-//    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
+    //    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
     int attachmentIndex = imageRange.location + 1;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentIndex effectiveRange:nil];
-//    NSLog(@"THE ATTACHMENT %@", attachment);
+    //    NSLog(@"THE ATTACHMENT %@", attachment);
 
     // validate attachment src
     if (![[match substringAtIndex:2] isEqualToString:[[attachment fileWrapper] filename]]) {
       [storage replaceCharactersInRange:NSMakeRange(attachmentIndex, 1) withString:@""];
-//      NSLog(@"attachment different to source, stripped");
+      //      NSLog(@"attachment different to source, stripped");
     } else {
-//      NSLog(@"attachment name same as source");
+      //      NSLog(@"attachment name same as source");
     }
   }
 
@@ -177,15 +221,51 @@
   int attachmentCompensation = 1;
   for (match in [imageNoAttachment matchEnumeratorInString:stString]) {
     // add attachment char with attachment
-//    NSLog(@"IMAGE %@", [match matchedString]);
+    //    NSLog(@"IMAGE %@", [match matchedString]);
     NSRange imageRange = [match rangeOfMatchedString];
 
     int adjustment = 0;
-//    NSLog(@"ATTACHMENT: %@", [match substringAtIndex:2]);
+    //    NSLog(@"ATTACHMENT: %@", [match substringAtIndex:2]);
     adjustment = [self attachImage:[match substringAtIndex:2] toString:storage atIndex:imageRange.location + attachmentCompensation];
     attachmentCompensation += adjustment;
   }
   
+}
+
+- (bool)isCodeSection:(NSAttributedString *)string atIndex:(int) index {
+  return [string attribute:MarkdownCodeSection atIndex:index effectiveRange:nil] != nil;
+}
+
+- (NSDictionary *)attributesForIndentTo:(int) level leadOffset:(int) pixels {
+  NSMutableParagraphStyle *ps;
+  ps = [[NSMutableParagraphStyle alloc] init];
+
+  int pointIndent = 10 + level * 18;
+  // 28, 16 => 28, 12
+  
+  // 0 left edge
+  // 28 code
+  // 32 > 44 quote
+  //         56 wrapped line
+
+  // 32 > 44\n quote with breaks
+  //  32 next line
+
+  // 48 > 60 > 72 double quote
+  //              84 wrapped line
+
+  // 48 > 60 > 72\n double with breaks
+  //  48 next line
+
+
+  [ps setHeadIndent:pointIndent];
+  [ps setFirstLineHeadIndent:pointIndent - pixels * level];
+//  [ps setTailIndent:-pointIndent];
+  return [NSDictionary dictionaryWithObject: ps forKey:NSParagraphStyleAttributeName];
+}
+
+- (int)occurencesOf:(NSString *)divider in:(NSString *)target {
+  return [[target componentsSeparatedByString:divider] count] - 1;
 }
 
 - (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
@@ -199,25 +279,6 @@
 //  NSFont *big = [NSFont userFontOfSize:24];
 //  NSFont *normal = [NSFont userFontOfSize:14];
 
-  OGRegularExpression    *pattern, *link, *image;
-// /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
-  pattern = [OGRegularExpression regularExpressionWithString:@"(?<!\\\\)([*_`]{1,2})((?!\\1).*?[^\\\\])(\\1)"];
-
-  // Link tags
-  // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
-  // explained: 
-  //    (?<!!)  # doesn't have a ! before the [
-  //    \[ # start of anchor text
-  //    (                     # capture...
-  //      (?:\!\[.*?\]\(.*?\) # an image,
-  //      |.)                 # or anything else
-  //      *?)                 # zero or more of above
-  //    \] # end anchor text
-  //    \((.*?)\) # capture url
-  link = [OGRegularExpression regularExpressionWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar]];
-
-  NSEnumerator    *enumerator;
-
   NSRange storageRange = NSMakeRange(0, [storage length]);
   [storage removeAttribute:NSParagraphStyleAttributeName range:storageRange];
   [storage removeAttribute:NSFontAttributeName range:storageRange];
@@ -229,144 +290,92 @@
   [storage removeAttribute:NSLinkAttributeName range:storageRange];
   
   NSLog(@"----");
-  for (NSTextStorage *para in [storage paragraphs]) {
-    [para beginEditing];
-    NSRange paraRange = NSMakeRange(0, [para length]);
-
-    for (OGRegularExpressionMatch *match in [[OGRegularExpression regularExpressionWithString:@"!.."] matchEnumeratorInString:[para string]]) { 
-      id attrib = [para attribute:NSAttachmentAttributeName atIndex:[match rangeOfMatchedString].location effectiveRange:nil];
-      if (attrib != nil) {
-	NSLog(@"Attach %@ @ %d", attrib, [match rangeOfMatchedString].location);
-      }
-      
-    }
-    [para addAttributes:defaultAttributes range:paraRange];
-
-    if ([para length] == 1) {	// empty line
-//  NSLog(@"len %d", [para length]);
-      [para addAttributes:blankAttributes range:NSMakeRange(0, 1)];
-    } else {
-      NSString *str = [para string];
+  NSTextStorage *para = storage;
     
-      NSRange r = [str rangeOfString:@"> " options:NSAnchoredSearch];
-      if (r.location != NSNotFound) {
-	[para addAttributes:blockquoteAttributes range:paraRange];
-	[para addAttributes:metaAttributes range:r];
-      }
+  [para beginEditing];
+  [para addAttributes:defaultAttributes range:NSMakeRange(0, [para length])];
 
-      r = [str rangeOfString:@"# " options:NSAnchoredSearch];
-      if (r.location != NSNotFound) {
-	r.length -= 1;
-	[para addAttributes:h1Attributes range:paraRange];
-	[para addAttributes:metaAttributes range:r];
-	goto finish;
-      }
-    
-      r = [str rangeOfString:@"## " options:NSAnchoredSearch];
-      if (r.location != NSNotFound) {
-	r.length -= 1;
-	[para addAttributes:h2Attributes range:paraRange];
-	[para addAttributes:metaAttributes range:r];
-	goto finish;
-      }
+  NSString *str = [para string];
 
-      r = [str rangeOfString:@"    " options:NSAnchoredSearch];
-      if (r.location != NSNotFound) {
-	[para addAttributes:codeAttributes range:paraRange];
-	NSRange content = NSMakeRange(4, [str length] - 4);
-	[para addAttribute:NSToolTipAttributeName value:[str substringWithRange:content] range:content];
-//      NSLog(@"%@", [para string]);
-	goto finish;
-      }
-
-    finish:
-//     enumerator = [codeEx matchEnumeratorInString:str];
-//     OGRegularExpressionMatch    *match;
-//     while ((match = [enumerator nextObject]) != nil) {        
-//         NSRange mRange = [match rangeOfMatchedString];
-// //        [para addAttribute:NSFontAttributeName value:code range:mRange];
-//         [para addAttributes:codeAttributes range:mRange];
-//         [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
-//         [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:2]];
-//       }
-
-      // for (OGRegularExpressionMatch *match in [strong matchEnumeratorInString:str]) {
-      //     NSRange mRange = [match rangeOfMatchedString];
-      //     [para addAttributes:strongAttributes range:mRange];
-      //     [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
-      //     [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:2]];
-      //   }
-
-      for (OGRegularExpressionMatch *match in [pattern matchEnumeratorInString:str]) {
-        NSRange mRange = [match rangeOfMatchedString];
-//        NSLog(@"%@ %@ %@", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:2]);
-        NSDictionary *attribs = nil;
-	if ([para attribute:MarkdownCodeSection atIndex:[match rangeOfSubstringAtIndex:1].location effectiveRange:nil] == nil) { // don't set attributes in code blocks
-	  if ([[match substringAtIndex:1] isEqualToString:@"`"]) { // code span
-            attribs = codeAttributes;
-	  } else if ([[match substringAtIndex:1] isEqualToString:@"**"] ||
-		     [[match substringAtIndex:1] isEqualToString:@"__"]) { // strong span
-	    attribs = strongAttributes;
-	  } else { // em span
-	    attribs = emAttributes;
-	  }
-	}
-//        [para addAttribute:NSFontAttributeName value:code range:mRange];
-        if (attribs != nil) {
-          [para addAttributes:attribs range:mRange];
-          [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
-          [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
-        }
-      }
- 
-     for (OGRegularExpressionMatch *match in [image matchEnumeratorInString:str]) {
-       NSRange mRange = [match rangeOfMatchedString];
-       NSString *src = [match substringAtIndex:2];	
-       NSLog(@"Image with src %@", src);
-       
-       id attrib = [para attribute:NSAttachmentAttributeName atIndex:[match rangeOfMatchedString].location effectiveRange:nil];
-       if (attrib == nil) {
-	  NSError *error;
-//	if (document) 
-//	  NSLog(@"Doc: %@", [document fileURL]);
-	  NSURL *url = [NSURL URLWithString:src relativeToURL:[document fileURL]];
-//	NSLog(@"URL: %@", url);
-	  if (url) {
-	    NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
-//	  NSLog(@"Wrapper: %@ error: %@", wrapper, error);
-	    NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
-	    [para addAttribute:NSAttachmentAttributeName value:img range:NSMakeRange(mRange.location, 1)];
-//	    [img release];
-//	    [wrapper release];
-	  }
-	}
-       [para addAttributes:metaAttributes range:mRange];
-     }
-     
-      OGRegularExpressionMatch *match;
-      enumerator = [link matchEnumeratorInString:str];
-      while ((match = [enumerator nextObject]) != nil) {
-        NSRange mRange = [match rangeOfMatchedString];
-        NSRange textRange = [match rangeOfSubstringAtIndex:1];
-//	NSLog(@"text: %d %d", textRange.location, textRange.length);
-        NSRange urlRange = [match rangeOfSubstringAtIndex:2];
-//	NSLog(@"url: %d %d", urlRange.location, urlRange.length);
-
-	if (urlRange.location != NSNotFound && textRange.location != NSNotFound) {
-//        [para addAttribute:NSUnderlineStyleAttributeName value:NSUnderlineStyleSingle range:textRange];
-	  [para addAttributes:metaAttributes range:mRange];
-//[para addAttribute:NSFontAttributeName value:[NSFont userFontOfSize:1] range:urlRange];
-//[para addAttribute:NSFontAttributeName value:[NSFont userFontOfSize:14] range:textRange];
-	  [para addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[match substringAtIndex:2]] range:textRange];
-	}
-      }
-    }
-
-
-//      [para fixFontAttributeInRange:n];
-//      [para endEditing];
+  for (OGRegularExpressionMatch *match in [listRegex matchEnumeratorInString:str]) {
+    NSString *prefix = [match substringAtIndex:1];
+    int indent = [self occurencesOf:@"*" in:prefix] + [self occurencesOf:@"." in:prefix];
+    NSLog(@"indent: %d", indent);
+    [para addAttributes:[self attributesForIndentTo:indent leadOffset:9] range:[match rangeOfMatchedString]];
+    [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
   }
 
+  for (OGRegularExpressionMatch *match in [codeBlockRegex matchEnumeratorInString:str]) {
+    [para addAttributes:codeAttributes range:[match rangeOfMatchedString]];
+    NSRange content = [match rangeOfSubstringAtIndex:1];
+    [para addAttribute:NSToolTipAttributeName value:[match substringAtIndex:1] range:content];
+    //      NSLog(@"%@", [para string]);
+  }
+    
+  for (OGRegularExpressionMatch *match in [blockquoteRegex matchEnumeratorInString:str]) {
+    if (![self isCodeSection:para atIndex:[match rangeOfMatchedString].location]) {       // don't set attributes in code blocks
+      [para addAttributes:blockquoteAttributes range:[match rangeOfMatchedString]];
+      [para addAttributes:[self attributesForIndentTo:[self occurencesOf:@">" in:[match substringAtIndex:1]] leadOffset:12] range:[match rangeOfMatchedString]];
+      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+    }
+  }
+
+  for (OGRegularExpressionMatch *match in [header matchEnumeratorInString:str]) {
+//    NSLog(@"matched: %@", [match matchedString]);
+    NSRange headerPrefix = [match rangeOfSubstringAtIndex:1];
+    if (![self isCodeSection:para atIndex:headerPrefix.location]) {
+      NSDictionary *attributes;
+      if (headerPrefix.length == 1)
+	attributes = h1Attributes;
+      else
+	attributes = h2Attributes;
+      
+      [para addAttributes:attributes range:[match rangeOfSubstringAtIndex:2]];
+      [para addAttributes:metaAttributes range:headerPrefix];
+      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+    }
+  }
+
+  for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInString:str]) {
+    NSRange mRange = [match rangeOfMatchedString];
+//        NSLog(@"%@ %@ %@", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:2]);
+    NSDictionary *attribs = nil;
+    if (![self isCodeSection:para atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
+      if ([[match substringAtIndex:1] isEqualToString:@"`"]) { // code span
+	attribs = codeAttributes;
+      } else if ([[match substringAtIndex:1] isEqualToString:@"**"] ||
+		 [[match substringAtIndex:1] isEqualToString:@"__"]) { // strong span
+	attribs = strongAttributes;
+      } else { // em span
+	attribs = emAttributes;
+      }
+    }
+//        [para addAttribute:NSFontAttributeName value:code range:mRange];
+    if (attribs != nil) {
+      [para addAttributes:attribs range:mRange];
+      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+      [para addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+    }
+  }
+ 
+  for (OGRegularExpressionMatch *match in [image matchEnumeratorInString:str]) {    
+    [para addAttributes:metaAttributes range:[match rangeOfMatchedString]];
+  }
+     
+  for (OGRegularExpressionMatch *match in [link matchEnumeratorInString:str]) {
+    NSRange mRange = [match rangeOfMatchedString];
+    NSRange textRange = [match rangeOfSubstringAtIndex:1];
+//	NSLog(@"text: %d %d", textRange.location, textRange.length);
+    NSRange urlRange = [match rangeOfSubstringAtIndex:2];
+//	NSLog(@"url: %d %d", urlRange.location, urlRange.length);
+
+    if (urlRange.location != NSNotFound && textRange.location != NSNotFound) {
+      [para addAttributes:metaAttributes range:mRange];
+      [para addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[match substringAtIndex:2]] range:textRange];
+    }
+  }
+//      [para fixFontAttributeInRange:n];
+//      [para endEditing];
 
   n.location = 0;
   n.length = [storage length];

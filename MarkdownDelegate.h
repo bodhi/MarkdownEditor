@@ -9,6 +9,8 @@
 #import <Cocoa/Cocoa.h>
 #import "MarkdownDocument.h"
 
+@class OGRegularExpression;
+
 @interface MarkdownDelegate : NSObject <NSTextStorageDelegate> {
     NSTextView *text;
 
@@ -18,7 +20,17 @@
       *defaultAttributes;
     
     NSString *MarkdownCodeSection;
+
+    NSString *imageMark;
+    NSString *baseRegex;
     NSString *attachmentChar;
+
+    OGRegularExpression *imageNoAttachment;
+    OGRegularExpression *attachedImage;
+    OGRegularExpression *attachmentNoImage;
+
+    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex;
+
     IBOutlet MarkdownDocument *document;
 }
 
