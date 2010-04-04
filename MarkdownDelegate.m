@@ -14,9 +14,19 @@
 
 - (void)awakeFromNib {
   [text textStorage].delegate = self;
+
+  references = [[NSMutableDictionary alloc] init];
   
   NSFontManager *fontManager = [NSFontManager sharedFontManager];
+
+  MarkdownCodeSection = @"MarkdownCodeSection";
+  MarkdownTextSize = @"MarkdownSectionTextSize";
   
+  NSNumber *bigSize = [NSNumber numberWithInt:24];
+  NSNumber *codeSize = [NSNumber numberWithInt:12];
+  NSNumber *quoteSize = [NSNumber numberWithInt:14];
+  NSNumber *normalSize = [NSNumber numberWithInt:14];
+
   NSMutableParagraphStyle *ps;
 //  ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setHeadIndent:28];
@@ -25,37 +35,37 @@
   blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //					  ps, NSParagraphStyleAttributeName,
 						[NSFont fontWithName:@"Georgia-Italic" size:14], NSFontAttributeName,
+					  quoteSize, MarkdownTextSize,
 					nil
       ] retain];
 
   NSColor *grey = [NSColor lightGrayColor];
-  NSFont *big = [NSFont userFontOfSize:24];
+//  NSFont *big = [NSFont userFontOfSize:24];
   NSFont *normal = [NSFont userFontOfSize:14];
-  NSFont *code = [NSFont userFixedPitchFontOfSize:12];
+//  NSFont *code = [NSFont userFixedPitchFontOfSize:12];
   metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
 				    grey, NSForegroundColorAttributeName, 
-				  normal, NSFontAttributeName, 
+//				  normal, NSFontAttributeName, 
 				  nil
       ] retain];
   
   ps = [[NSMutableParagraphStyle alloc] init];
   [ps setLineBreakMode:NSLineBreakByTruncatingTail];
-  MarkdownCodeSection = @"MarkdownCodeSection";
   codeAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
 			     [NSColor colorWithCalibratedWhite:0.95 alpha:1.0], NSBackgroundColorAttributeName,
 				  ps, NSParagraphStyleAttributeName,
-				  code, NSFontAttributeName,
+//				  code, NSFontAttributeName,
 				  [[NSObject alloc] init], MarkdownCodeSection,
 				  nil
       ] retain];
 
   strongAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
-					[fontManager convertFont:normal toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
+//					[fontManager convertFont:normal toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
 				    nil
       ] retain];
 
   emAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
-				    [fontManager convertFont:normal toHaveTrait:NSFontItalicTrait], NSFontAttributeName,
+//				    [fontManager convertFont:normal toHaveTrait:NSFontItalicTrait], NSFontAttributeName,
 				nil
       ] retain];
 
@@ -65,15 +75,17 @@
 //  [ps setMaximumLineHeight:lineHeight];
 //  [ps setParagraphSpacingBefore:lineHeight];
   h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
-				    [fontManager convertFont:big toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
+//				    [fontManager convertFont:big toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
+				  bigSize, MarkdownTextSize,
 				ps, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
 
   h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
-				  big, NSFontAttributeName,
+//				  big, NSFontAttributeName,
 				ps, NSParagraphStyleAttributeName,
+				  bigSize, MarkdownTextSize,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
@@ -87,8 +99,8 @@
       ] retain];
 
   ps = [[NSMutableParagraphStyle alloc] init];
-  [ps setMinimumLineHeight:lineHeight];
-  [ps setMaximumLineHeight:lineHeight];
+//  [ps setMinimumLineHeight:lineHeight];
+//  [ps setMaximumLineHeight:lineHeight];
   defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
 				       ps, NSParagraphStyleAttributeName,
 				     normal, NSFontAttributeName,
@@ -107,11 +119,11 @@
   //   ((?:
   //   \s*\d+\.\s* # a numeric item
   //   |           # or
-  //   [\s*]       # an unordered one
+  //   \s*\*       # zero or more spaces followed by a *
   // )*)           # lots
   // (.*)
   // $
-  listRegex = [[OGRegularExpression alloc] initWithString:@"^(?:[\\s>]*)((?:\\s*\\d+\\.\\s*|[\\s*])*)(.*)$"];
+  listRegex = [[OGRegularExpression alloc] initWithString:@"^(?:[\\s>]*)((?:\\s*\\d+\\.\\s*|\\s*\\*\\s*)+)(.*)$"];
 
   // Image tags:
   // !K?\[(.*?)\]\((.*?)\)
@@ -148,6 +160,9 @@
   //    \((.*?)\) # capture url
   link = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
 
+  // /^\s*\[(.*?)\]:\s*(\S*)\s*(".*?")?\s*$/
+  refRegex = [[OGRegularExpression alloc] initWithString:@"^\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\".+?\")?\\s*$"];
+
 
   header = [[OGRegularExpression alloc] initWithString:@"^(?:[\\s>]*)(#+)(.*?)(#*)?$"];
 
@@ -157,32 +172,38 @@
 }
 
 - (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
-  NSLog(@"Image with src %@", imageSrc);
+//  NSLog(@"Image with src %@", imageSrc);
   
   NSError *error;
 //	if (document) 
 //	  NSLog(@"Doc: %@", [document fileURL]);
   NSURL *url = [NSURL URLWithString:imageSrc relativeToURL:[document fileURL]];
-  NSLog(@"URL scheme: %@", [url scheme]);
+//  NSLog(@"URL scheme: %@", [url scheme]);
   if (url && [[url scheme] isEqualToString:@"file"]) {
     NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
     if (wrapper) {
-      NSLog(@"Wrapper: %@ error: %@", wrapper, error);
+//      NSLog(@"Wrapper: %@ error: %@", wrapper, error);
       NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
       NSAttributedString *imageString = [NSAttributedString attributedStringWithAttachment:img];
       
-      NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
+//      NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
       [target beginEditing];
       [target insertAttributedString:imageString atIndex:index];
       [target endEditing];
       [img release];
       [wrapper release];
     } else {
-      NSLog(@"No file for %@", url);
+//      NSLog(@"No file for %@", url);
     }
     return 1;
   }
   return 0;
+}
+
+- (NSString *)urlForLink:(NSString *)link {
+  NSString *url = [references objectForKey:link];
+  if (url == nil) url = link;
+  return url;
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -203,12 +224,14 @@
   for (match in [attachedImage matchEnumeratorInString:stString]) {
     NSRange imageRange = [match rangeOfMatchedString];
     //    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
+    NSString *src = [self urlForLink:[match substringAtIndex:2]];
+
     int attachmentIndex = imageRange.location + 1;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentIndex effectiveRange:nil];
     //    NSLog(@"THE ATTACHMENT %@", attachment);
 
     // validate attachment src
-    if (![[match substringAtIndex:2] isEqualToString:[[attachment fileWrapper] filename]]) {
+    if (![src isEqualToString:[[attachment fileWrapper] filename]]) {
       [storage replaceCharactersInRange:NSMakeRange(attachmentIndex, 1) withString:@""];
       //      NSLog(@"attachment different to source, stripped");
     } else {
@@ -220,13 +243,14 @@
   // Do this after removing attachments with incorrect images
   int attachmentCompensation = 1;
   for (match in [imageNoAttachment matchEnumeratorInString:stString]) {
+    NSString *src = [self urlForLink:[match substringAtIndex:2]];
     // add attachment char with attachment
     //    NSLog(@"IMAGE %@", [match matchedString]);
     NSRange imageRange = [match rangeOfMatchedString];
 
     int adjustment = 0;
     //    NSLog(@"ATTACHMENT: %@", [match substringAtIndex:2]);
-    adjustment = [self attachImage:[match substringAtIndex:2] toString:storage atIndex:imageRange.location + attachmentCompensation];
+    adjustment = [self attachImage:src toString:storage atIndex:imageRange.location + attachmentCompensation];
     attachmentCompensation += adjustment;
   }
   
@@ -240,7 +264,7 @@
   NSMutableParagraphStyle *ps;
   ps = [[NSMutableParagraphStyle alloc] init];
 
-  int pointIndent = 16 + level * 12;
+  int pointIndent = 12 + level * 16;
   // 28, 16 => 28, 12
   
   // 0 left edge
@@ -264,8 +288,64 @@
   return [NSDictionary dictionaryWithObject: ps forKey:NSParagraphStyleAttributeName];
 }
 
+- (int)fontSizeOfString:(NSAttributedString *)string atIndex:(int)index {
+  NSNumber *number =  [string attribute:MarkdownTextSize atIndex:index effectiveRange:nil];
+  return (number != nil) ? [number intValue] : 14;
+}
+
+- (NSFont *)fontOfString:(NSAttributedString *)string atIndex:(int)index {
+  return [string attribute:NSFontAttributeName atIndex:index effectiveRange:nil];
+}
+
+- (NSFont *)codeFontForSize:(int)size {
+  return [NSFont userFixedPitchFontOfSize:size];
+}
+
+- (NSFont *)emphasisedFont:(NSFont *)font {
+  NSFontManager *fontManager = [NSFontManager sharedFontManager];
+  NSFontTraitMask trait = NSFontItalicTrait;
+  if ([fontManager traitsOfFont:font] & NSItalicFontMask) {
+    font = [fontManager convertFont:font toNotHaveTrait:trait];
+  } else {
+    font = [fontManager convertFont:font toHaveTrait:trait];
+  }
+  return font;
+}
+
+- (NSFont *)strongFont:(NSFont *)font {
+  NSFontManager *fontManager = [NSFontManager sharedFontManager];
+  NSFontTraitMask trait = NSFontBoldTrait;
+  if ([fontManager traitsOfFont:font] & NSBoldFontMask) {
+    font = [fontManager convertFont:font toNotHaveTrait:trait];
+  } else {
+    font = [fontManager convertFont:font toHaveTrait:trait];
+  }
+  return font;
+}
+
+
+- (NSFont *)headerFontForFont:(NSFont *)font bold:(bool) bold {
+  NSFontManager *fontManager = [NSFontManager sharedFontManager];
+
+//  NSFont *font = [NSFont userFontOfSize:size];
+  font = [fontManager convertFont:font toSize:24];
+  
+  if (bold)
+    font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
+
+  return font;
+}
+
 - (int)occurencesOf:(NSString *)divider in:(NSString *)target {
   return [[target componentsSeparatedByString:divider] count] - 1;
+}
+
+- (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range {
+  int size = [self fontSizeOfString:string atIndex:range.location];
+  NSFont *font = [self codeFontForSize:size];
+  
+  [string addAttribute:NSFontAttributeName value:font range:range];
+  [string addAttributes:metaAttributes range:range];
 }
 
 - (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
@@ -289,14 +369,26 @@
   [storage removeAttribute:MarkdownCodeSection range:storageRange];
   [storage removeAttribute:NSLinkAttributeName range:storageRange];
   [storage addAttributes:defaultAttributes range:NSMakeRange(0, [storage length])];
+
+  [references removeAllObjects];
+  for (OGRegularExpressionMatch *match in [refRegex matchEnumeratorInAttributedString:storage]) {
+    NSRange range = [match rangeOfMatchedString];
+    NSString *ref = [match substringAtIndex:1];
+    NSString *url = [match substringAtIndex:2];
+    NSString *title = [match substringAtIndex:3];
+    [references setObject:url forKey:ref];
+    [self markAsMeta:storage range:range];
+    [storage addAttributes:[self attributesForIndentTo:1 leadOffset:0] range:range];
+  }
   
   NSLog(@"----");
 
   for (OGRegularExpressionMatch *match in [listRegex matchEnumeratorInAttributedString:storage]) {
     NSString *prefix = [match substringAtIndex:1];
+    NSLog(@"List! '%@'", prefix);
     int indent = [self occurencesOf:@"*" in:prefix] + [self occurencesOf:@"." in:prefix];
-    [storage addAttributes:[self attributesForIndentTo:indent leadOffset:9] range:[match rangeOfMatchedString]];
-    [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+    [storage addAttributes:[self attributesForIndentTo:indent leadOffset:16] range:[match rangeOfMatchedString]];
+    [self markAsMeta:storage range:[match rangeOfSubstringAtIndex:1]];
   }
 
   for (OGRegularExpressionMatch *match in [codeBlockRegex matchEnumeratorInAttributedString:storage]) {
@@ -304,13 +396,14 @@
     NSRange content = [match rangeOfSubstringAtIndex:1];
     [storage addAttribute:NSToolTipAttributeName value:[match substringAtIndex:1] range:content];
     //      NSLog(@"%@", [storage string]);
+    [storage addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:[match rangeOfMatchedString]];
   }
     
   for (OGRegularExpressionMatch *match in [blockquoteRegex matchEnumeratorInAttributedString:storage]) {
     if (![self isCodeSection:storage atIndex:[match rangeOfMatchedString].location]) {       // don't set attributes in code blocks
       [storage addAttributes:blockquoteAttributes range:[match rangeOfMatchedString]];
-      [storage addAttributes:[self attributesForIndentTo:[self occurencesOf:@">" in:[match substringAtIndex:1]] leadOffset:12] range:[match rangeOfMatchedString]];
-      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
+      [storage addAttributes:[self attributesForIndentTo:[self occurencesOf:@">" in:[match substringAtIndex:1]] leadOffset:16] range:[match rangeOfMatchedString]];
+      [self markAsMeta:storage range:[match rangeOfSubstringAtIndex:1]];
     }
   }
 
@@ -324,9 +417,11 @@
       else
 	attributes = h2Attributes;
       
+      NSFont *font = [self headerFontForFont:[self fontOfString:storage atIndex:headerPrefix.location] bold:(headerPrefix.length == 1)];
+      [storage addAttribute:NSFontAttributeName value:font range:[match rangeOfSubstringAtIndex:2]];
       [storage addAttributes:attributes range:[match rangeOfSubstringAtIndex:2]];
-      [storage addAttributes:metaAttributes range:headerPrefix];
-      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+      [self markAsMeta:storage range:headerPrefix];
+      [self markAsMeta:storage range:[match rangeOfSubstringAtIndex:3]];
     }
   }
 
@@ -335,27 +430,32 @@
 //        NSLog(@"%@ %@ %@", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:2]);
     NSDictionary *attribs = nil;
     NSString *delimiter = [match substringAtIndex:1];
+    NSFont *font = [self fontOfString:storage atIndex:mRange.location];
     if (![self isCodeSection:storage atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
       if ([delimiter isEqualToString:@"`"] ||
 	  [delimiter isEqualToString:@"``"]) { // code span
 	attribs = codeAttributes;
+	font = [self codeFontForSize:[self fontSizeOfString:storage atIndex:mRange.location]];
       } else if ([delimiter isEqualToString:@"**"] ||
 		 [delimiter isEqualToString:@"__"]) { // strong span
 	attribs = strongAttributes;
+	font = [self strongFont:font];
       } else { // em span
 	attribs = emAttributes;
+	font = [self emphasisedFont:font];
       }
     }
 //        [storage addAttribute:NSFontAttributeName value:code range:mRange];
     if (attribs != nil) {
+      [storage addAttribute:NSFontAttributeName value:font range:mRange];
       [storage addAttributes:attribs range:mRange];
-      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:1]];
-      [storage addAttributes:metaAttributes range:[match rangeOfSubstringAtIndex:3]];
+      [self markAsMeta:storage range:[match rangeOfSubstringAtIndex:1]];
+      [self markAsMeta:storage range:[match rangeOfSubstringAtIndex:3]];
     }
   }
  
   for (OGRegularExpressionMatch *match in [image matchEnumeratorInAttributedString:storage]) {    
-    [storage addAttributes:metaAttributes range:[match rangeOfMatchedString]];
+    [self markAsMeta:storage range:[match rangeOfMatchedString]];
   }
      
   for (OGRegularExpressionMatch *match in [link matchEnumeratorInAttributedString:storage]) {
@@ -366,8 +466,9 @@
 //	NSLog(@"url: %d %d", urlRange.location, urlRange.length);
 
     if (urlRange.location != NSNotFound && textRange.location != NSNotFound) {
-      [storage addAttributes:metaAttributes range:mRange];
-      [storage addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[match substringAtIndex:2]] range:textRange];
+      [self markAsMeta:storage range:NSMakeRange(mRange.location, 1)];
+      [self markAsMeta:storage range:NSMakeRange(urlRange.location - 2, urlRange.length + 3)]; // '](' before url and ')' after
+      [storage addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[self urlForLink:[match substringAtIndex:2]]] range:textRange];
     }
   }
 

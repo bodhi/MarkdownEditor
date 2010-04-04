@@ -18,8 +18,10 @@
       *codeAttributes, *strongAttributes, *emAttributes,
       *blankAttributes, *h1Attributes, *h2Attributes,
       *defaultAttributes;
+
+    NSMutableDictionary *references;
     
-    NSString *MarkdownCodeSection;
+    NSString *MarkdownCodeSection, *MarkdownTextSize;
 
     NSString *imageMark;
     NSString *baseRegex;
@@ -29,7 +31,7 @@
     OGRegularExpression *attachedImage;
     OGRegularExpression *attachmentNoImage;
 
-    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex;
+    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex, *refRegex;
 
     IBOutlet MarkdownDocument *document;
 }
