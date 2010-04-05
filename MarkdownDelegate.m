@@ -169,6 +169,21 @@
   blockquoteRegex = [[OGRegularExpression alloc] initWithString:@"^((?:\\s*>+\\s*)+)(.*?(?:\\r{2}|\\n{2}|(?:\\r\\n){2}))" options:OgreMultilineOption];
 //  blockquoteRegex = [[OGRegularExpression alloc] initWithString:@"^((?:\\s*>+\\s*)+)(.*)"];
   codeBlockRegex = [[OGRegularExpression alloc] initWithString:@"^ {4}(.*\r?\n?)"];
+
+
+  // ^([\t ]*([-*])(?:[\t ]*\2){2,}[\t ]*)$
+  hrRegex = [[OGRegularExpression alloc] initWithString:@"^([\\t ]{,3}([-*])(?:[\\t ]*\\2){2,}[\\t ]*)$"];
+
+  ps = [[NSMutableParagraphStyle alloc] init];
+//  [ps setMinimumLineHeight:lineHeight];
+//  [ps setMaximumLineHeight:lineHeight];
+  [ps setAlignment:NSCenterTextAlignment];
+  hrAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
+				  ps, NSParagraphStyleAttributeName,
+				normal, NSFontAttributeName,
+				nil
+      ] retain];
+  
 }
 
 - (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
@@ -471,6 +486,11 @@
       [storage addAttribute:NSLinkAttributeName value:[NSURL URLWithString:[self urlForLink:[match substringAtIndex:2]]] range:textRange];
     }
   }
+
+  for (OGRegularExpressionMatch *match in [hrRegex matchEnumeratorInAttributedString:storage]) {    
+    [storage addAttributes:hrAttributes range:[match rangeOfMatchedString]];
+  }
+  
 
   n.location = 0;
   n.length = [storage length];

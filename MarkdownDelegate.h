@@ -17,7 +17,7 @@
     NSDictionary *blockquoteAttributes, *metaAttributes, 
       *codeAttributes, *strongAttributes, *emAttributes,
       *blankAttributes, *h1Attributes, *h2Attributes,
-      *defaultAttributes;
+      *defaultAttributes, *hrAttributes;
 
     NSMutableDictionary *references;
     
@@ -31,7 +31,7 @@
     OGRegularExpression *attachedImage;
     OGRegularExpression *attachmentNoImage;
 
-    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex, *refRegex;
+    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex, *refRegex, *hrRegex;
 
     IBOutlet MarkdownDocument *document;
 }
