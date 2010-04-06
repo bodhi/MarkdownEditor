@@ -239,7 +239,7 @@ static NSString *setexType = @"setex";
 // }
   blocks = [[NSDictionary alloc] initWithObjectsAndKeys:
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^\\d+\\.\\s+|\\*\\s+"],
+											   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
 						   headerType, listType, nil], listType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*)$"],
@@ -551,8 +551,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     }
 //    NSLog(@"'%@': text:'%@' suffix:'%@' url:'%@' title:'%@' ref:'%@'", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:7], [match substringAtIndex:8], [match substringAtIndex:9], [match substringAtIndex:10]);
 
-    suffix.location -= 2;	// '](' before url+title|ref and...
-    suffix.length += 3;		// ) after
+    suffix.location -= 1;	// ']' before url+title
+    suffix.length += 1;
 
       [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
       [self markAsMeta:string range:suffix];
@@ -623,7 +623,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     while ([localStack count] > 0) {
       MDBlock *block = [localStack objectAtIndex:0];
       [localStack removeObjectAtIndex:0];
-
     
       prefix = NSMakeRange(range.location + block.indent, block.prefixLength);
       if (prefix.length > range.length - block.indent) prefix.length = range.length - block.indent;
@@ -813,7 +812,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       if (match = [regex matchInAttributedString:string range:lineRange]) {
 	NSRange mRange = [match rangeOfSubstringAtIndex:1];
 	if (mRange.location == NSNotFound) mRange = [match rangeOfMatchedString];
-	
+
 	[self pushParagraphBlock:stack block:[MDBlock blockWithType:type indent:indent prefix:mRange.length match:match]];
 	indent += mRange.length;
 	order = process;
@@ -833,14 +832,15 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     }
     
   }
+
+  if (prevRange.length > 0 && prevStack != nil)
+    [self markLine:string range:prevRange stack:prevStack];
+
   if (newReferences) {
     [self markLinks:string range:NSMakeRange(0, [string length])];
     [self markImages:string range:NSMakeRange(0, [string length])];
     newReferences = false;
   }
-
-  if (prevRange.length > 0 && prevStack != nil)
-    [self markLine:string range:prevRange stack:prevStack];
 
   [string fixAttributesInRange:stringRange];
   [storage endEditing];
