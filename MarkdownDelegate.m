@@ -17,6 +17,7 @@ static NSString *codeType = @"code";
 static NSString *hrType = @"hr";
 static NSString *plainType = @"plain";
 static NSString *setexType = @"setex";
+static NSString *setexMarkerType = @"setexMarker";
 
 @interface MDBlock : NSObject <NSCopying> {
   NSString *type;
@@ -403,22 +404,6 @@ static NSString *setexType = @"setex";
   ps = [[NSMutableParagraphStyle alloc] init];
 
   int pointIndent = 16 + level * 16;
-  // 28, 16 => 28, 12
-  
-  // 0 left edge
-  // 28 code
-  // 32 > 44 quote
-  //         56 wrapped line
-
-  // 32 > 44\n quote with breaks
-  //  32 next line
-
-  // 48 > 60 > 72 double quote
-  //              84 wrapped line
-
-  // 48 > 60 > 72\n double with breaks
-  //  48 next line
-
 
   [ps setHeadIndent:pointIndent];
   [ps setFirstLineHeadIndent:pointIndent - pixels * level];
@@ -630,7 +615,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 - (void) markLine:(NSMutableAttributedString *)line range:(NSRange) range stack:(NSArray *)stack {
   if (range.length > 0 && stack != nil) {
 
-    [line addAttribute:NSToolTipAttributeName value:[NSString stringWithFormat:@"%@", stack] range:range];
+//    [line addAttribute:NSToolTipAttributeName value:[NSString stringWithFormat:@"%@", stack] range:range];
 
     NSMutableArray *localStack = [NSMutableArray arrayWithArray:stack];
 
@@ -646,67 +631,67 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       prefix = NSMakeRange(range.location + block.indent, block.prefixLength);
       if (prefix.length > range.length - block.indent) prefix.length = range.length - block.indent;
       content = NSMakeRange(prefix.location + prefix.length, 0);
-      content.length = range.location + range.length - content.location;
+      
+      if (range.location + range.length > content.location)
+	content.length = range.location + range.length - content.location;
 
       if (prefix.length > 0) [self markAsMeta:line range:prefix];
 
-//      if (content.length > 0) {
 //	NSLog(@"%@: '%@' %d %d", block, [line string], prefix.length, all.length);
 //	NSLog(@"%@ (%d %d): %@", stack, range.location, range.length, [[line attributedSubstringFromRange:content] string]);
 
-	if (block.type == codeType) {
-	  [line addAttributes:codeAttributes range:range];
-	  NSLog(@"Not marking code tooltip");
-//	  [line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
-	  //      NSLog(@"%@", [storage string]);
-	  [line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
-	} else if (block.type == headerType) {
-	  NSDictionary *attributes = h1Attributes;
-	  NSRange suffix = NSMakeRange(NSNotFound, 0);
+      if (block.type == codeType) {
+	[line addAttributes:codeAttributes range:range];
+//	NSLog(@"Not marking code tooltip");
+	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
+	//      NSLog(@"%@", [storage string]);
+	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
+      } else if (block.type == headerType) {
+	NSDictionary *attributes = h1Attributes;
+	NSRange suffix = NSMakeRange(NSNotFound, 0);
 
-	  if (block.match != nil) {
-	    prefix = [block.match rangeOfSubstringAtIndex:1];
-	    suffix = [block.match rangeOfSubstringAtIndex:2];
+	if (block.match != nil) {
+	  prefix = [block.match rangeOfSubstringAtIndex:1];
+	  suffix = [block.match rangeOfSubstringAtIndex:2];
 	    
-	    if (prefix.length == 1) {
-	      attributes = h1Attributes;
-	    } else {
-	      attributes = h2Attributes;
-	    }
+	  if (prefix.length == 1) {
+	    attributes = h1Attributes;
+	  } else {
+	    attributes = h2Attributes;
 	  }
-	  
-	  NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:prefix.length];
-	  [line addAttribute:NSFontAttributeName value:font range:content];
-	  [line addAttributes:attributes range:content];
-
-	  // need to mark suffix too
-	  if (suffix.location != NSNotFound && suffix.length > 0) {
-	    int size = [self fontSizeOfString:line atIndex:prefix.location];
-	    [self markAsMeta:line range:suffix size:size];
-	  }
-	} else if (block.type == setexType) {
-	  NSDictionary *attributes = h1Attributes;
-	  NSString *delimiter = [block.match substringAtIndex:1];
-	  bool isH1 = [delimiter isEqualToString:@"="];
-	  if (!isH1) attributes = h2Attributes;
-	  NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:(isH1?1:2)];
-	  [line addAttribute:NSFontAttributeName value:font range:content];
-	  [line addAttributes:attributes range:content];
-	} else if (block.type == quoteType) {
-	  [line addAttributes:blockquoteAttributes range:content];
-	} else if (block.type == hrType) {
-	  [line addAttributes:hrAttributes range:prefix];
-	} else if (block.type == refType) {
-	  OGRegularExpressionMatch *match = block.match;
-	  NSString *ref = [match substringAtIndex:2];
-	  NSString *url = [match substringAtIndex:3];
-	  //NSString *title = [match substringAtIndex:4];
-	  [self addReference:url forKey:ref];
-	} else {
-	  // other types
-	  NSLog(@"Dunno what to do with type '%@'", block.type);
 	}
-//    }
+	  
+	NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:prefix.length];
+	[line addAttribute:NSFontAttributeName value:font range:content];
+	[line addAttributes:attributes range:content];
+
+	// need to mark suffix too
+	if (suffix.location != NSNotFound && suffix.length > 0) {
+	  int size = [self fontSizeOfString:line atIndex:prefix.location];
+	  [self markAsMeta:line range:suffix size:size];
+	}
+      } else if (block.type == setexType) {
+	NSDictionary *attributes = h1Attributes;
+	NSString *delimiter = [block.match substringAtIndex:1];
+	bool isH1 = [delimiter isEqualToString:@"="];
+	if (!isH1) attributes = h2Attributes;
+	NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:(isH1?1:2)];
+	[line addAttribute:NSFontAttributeName value:font range:content];
+	[line addAttributes:attributes range:content];
+      } else if (block.type == quoteType) {
+	[line addAttributes:blockquoteAttributes range:content];
+      } else if (block.type == hrType) {
+	[line addAttributes:hrAttributes range:prefix];
+      } else if (block.type == refType) {
+	OGRegularExpressionMatch *match = block.match;
+	NSString *ref = [match substringAtIndex:2];
+	NSString *url = [match substringAtIndex:3];
+	//NSString *title = [match substringAtIndex:4];
+	[self addReference:url forKey:ref];
+      } else {
+	// other types
+//	  NSLog(@"Dunno what to do with type '%@'", block.type);
+      }
     }
 
     if (content.length > 0) [self markInlineElementsIn:line range:content];
@@ -810,7 +795,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
       prevStack = [NSMutableArray array];
       NSRange mRange = [match rangeOfMatchedString];
-      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:headerType indent:0 prefix:mRange.length match:match]];
+      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexMarkerType indent:0 prefix:mRange.length match:match]];
       prevRange = lineRange;	     // whole line, not subsection
 
       continue;
