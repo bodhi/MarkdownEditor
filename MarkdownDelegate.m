@@ -168,6 +168,10 @@ static NSString *setexType = @"setex";
   // \[(.*?)\] # title
   // \((.*?)\) # url
   imageMark = @"!";
+  
+//  NSString *urlSuffix = "\\((.+?)\\)";
+//  NSString *refSuffix = "\\[(.+?)\\]";
+  
   baseRegex = @"\\[(.*?)\\]\\((.*?)\\)";
 
   imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@", imageMark, baseRegex]];
@@ -195,7 +199,7 @@ static NSString *setexType = @"setex";
   //    \((.*?)\) # capture url
 //  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
 
-  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((\\S+)\\s*(\\\".+?\\\")?\\)", attachmentChar, attachmentChar]];
+  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.+?\\]\\(.+?\\)|.)*?)\\](\\((\\S+)\\s*(\\\".+?\\\")?\\)|\\[(.+?)\\])", attachmentChar, attachmentChar]];
 
   ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setMinimumLineHeight:lineHeight];
@@ -252,6 +256,7 @@ static NSString *setexType = @"setex";
 }
 
 - (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
+  return 0;
 //  NSLog(@"Image with src %@", imageSrc);
   
   NSError *error;
@@ -280,10 +285,14 @@ static NSString *setexType = @"setex";
   return 0;
 }
 
-- (NSString *)urlForLink:(NSString *)link {
-  NSString *url = [references objectForKey:link];
-  if (url == nil) url = link;
+- (NSURL *)urlForReference:(NSString *)link {
+  NSURL *url = [references objectForKey:link];
   return url;
+}
+
+- (void)addReference:(NSString *)urlString forKey:ref {
+  NSURL *url = [NSURL URLWithString:urlString];
+  if (url != nil) [references setObject:url forKey:ref];
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -304,7 +313,7 @@ static NSString *setexType = @"setex";
   for (match in [attachedImage matchEnumeratorInString:stString]) {
     NSRange imageRange = [match rangeOfMatchedString];
     //    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
-    NSString *src = [self urlForLink:[match substringAtIndex:2]];
+    NSString *src = [self urlForReference:[match substringAtIndex:2]];
 
     int attachmentIndex = imageRange.location + 1;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentIndex effectiveRange:nil];
@@ -323,7 +332,7 @@ static NSString *setexType = @"setex";
   // Do this after removing attachments with incorrect images
   int attachmentCompensation = 1;
   for (match in [imageNoAttachment matchEnumeratorInString:stString]) {
-    NSString *src = [self urlForLink:[match substringAtIndex:2]];
+    NSURL *src = [self urlForReference:[match substringAtIndex:2]];
     // add attachment char with attachment
     //    NSLog(@"IMAGE %@", [match matchedString]);
     NSRange imageRange = [match rangeOfMatchedString];
@@ -503,22 +512,34 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   for (OGRegularExpressionMatch *match in [linkRegex matchEnumeratorInAttributedString:string range:range]) {
     NSRange mRange = [match rangeOfMatchedString];
     NSRange textRange = [match rangeOfSubstringAtIndex:1];
-    NSRange urlRange = [match rangeOfSubstringAtIndex:2];
-    NSString *urlString = [match substringAtIndex:2];
+    NSRange urlRange = [match rangeOfSubstringAtIndex:3];
+    NSString *urlString = [match substringAtIndex:3];
     // Do nothing with title for now
-    // NSString *title = [match substringAtIndex:3];
-    NSURL *url = [NSURL URLWithString:[self urlForLink:urlString]];
-    NSLog(@"'%@' '%@'", urlString, url);
+    // NSString *title = [match substringAtIndex:4];
 
-    // '](' before url+title and ')' after
-    NSRange suffix = NSMakeRange(urlRange.location - 2, 0);
-    suffix.length = mRange.location + mRange.length - suffix.location;
+    NSRange refRange = [match rangeOfSubstringAtIndex:5];
+    NSString *ref = [match substringAtIndex:5];
+    NSURL *url = nil;
+    if (urlRange.length > 0) {
+      url = [NSURL URLWithString:urlString];
+    } else {
+      url = [self urlForReference:ref];
+    }
+    NSLog(@"'%@' '%@' '%@' '%@'", [match matchedString], [match substringAtIndex:3], urlString, url);
 
-    if (urlRange.location != NSNotFound && textRange.location != NSNotFound && url != nil) {
+    NSRange suffix = [match rangeOfSubstringAtIndex:2];
+    suffix.location -= 2;	// '](' before url+title|ref and...
+    suffix.length += 3;		// ) after
+
       [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
       [self markAsMeta:string range:suffix];
-      [string addAttribute:NSLinkAttributeName value:url range:textRange];
-    }
+      if (url != nil) {
+	[string addAttribute:NSLinkAttributeName value:url range:textRange];
+      } else {
+	[self markAsMeta:string range:textRange];
+	[string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:urlRange];
+	[string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:refRange];
+      }
   }
 }
 
@@ -638,7 +659,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	  NSString *ref = [match substringAtIndex:2];
 	  NSString *url = [match substringAtIndex:3];
 	  //NSString *title = [match substringAtIndex:4];
-	  [references setObject:url forKey:ref];
+	  [self addReference:url forKey:ref];
 	} else {
 	  // other types
 	}
