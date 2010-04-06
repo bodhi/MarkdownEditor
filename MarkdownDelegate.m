@@ -16,6 +16,7 @@ static NSString *quoteType = @"quote";
 static NSString *codeType = @"code";
 static NSString *hrType = @"hr";
 static NSString *plainType = @"plain";
+static NSString *setexType = @"setex";
 
 @interface MDBlock : NSObject <NSCopying> {
   NSString *type;
@@ -48,7 +49,7 @@ static NSString *plainType = @"plain";
 }
 
 - (id)copyWithZone:(NSZone *)zone {
-  return [MDBlock blockWithType:self.type indent:self.indent prefix:self.prefixLength];
+  return [MDBlock blockWithType:self.type indent:self.indent prefix:self.prefixLength match:self.match];
 }
 
 - (NSString *)description {
@@ -215,13 +216,13 @@ static NSString *plainType = @"plain";
 // }
   blocks = [[NSDictionary alloc] initWithObjectsAndKeys:
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
+											   @"^\\d+\\.\\s+|\\*\\s+"],
 						   headerType, listType, nil], listType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*$"],
 						   nil], refType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^#+\\s+"],
+											   @"^(#+)\\s+[^#]*(#*)"],
 						   nil], headerType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^>\\s+"],
@@ -230,7 +231,7 @@ static NSString *plainType = @"plain";
 											   @"^ {4}"],
 						    nil], codeType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^[\\t ]{,3}([-*])(?:[\\t ]*\\1){2,}[\\t ]*$"],
+											   @"^([\\t ]{,3}([-*])(?:[\\t ]*\\2){2,}[\\t ]*)$"],
 						    nil], hrType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(?=[^\\t >#*\\d-=\\[])"],
@@ -245,7 +246,7 @@ static NSString *plainType = @"plain";
   indented = [[OGRegularExpression alloc] initWithString:@"^\\s+(?=\\S)"];
 
   mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, nil];
-  lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, nil];
+  lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, setexType, nil];
 }
 
 - (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
@@ -412,13 +413,13 @@ static NSString *plainType = @"plain";
   return font;
 }
 
-- (NSFont *)headerFontForFont:(NSFont *)font bold:(bool) bold {
+- (NSFont *)headerFontForFont:(NSFont *)font level:(int) level {
   NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
 //  NSFont *font = [NSFont userFontOfSize:size];
   font = [fontManager convertFont:font toSize:24];
   
-  if (bold)
+  if (level == 1)
     font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
 
   return font;
@@ -428,12 +429,16 @@ static NSString *plainType = @"plain";
 //   return [[target componentsSeparatedByString:divider] count] - 1;
 // }
 
-- (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range {
-  int size = [self fontSizeOfString:string atIndex:range.location];
+- (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range size:(int)size {
   NSFont *font = [self codeFontForSize:size];
   
   [string addAttribute:NSFontAttributeName value:font range:range];
   [string addAttributes:metaAttributes range:range];
+}
+
+- (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range {
+  int size = [self fontSizeOfString:string atIndex:range.location];
+  [self markAsMeta:string range:range size:size];
 }
 
 typedef bool (^blockCheckFn)(MDBlock *bl);
@@ -586,17 +591,38 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	  [line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
 	} else if (block.type == headerType) {
 	  NSDictionary *attributes = h1Attributes;
-//      if (headerPrefix.length == 1)
-//	attributes = h1Attributes;
-//      else
-//	attributes = h2Attributes;
+	  NSRange suffix = NSMakeRange(NSNotFound, 0);
+
+	  if (block.match != nil) {
+	    prefix = [block.match rangeOfSubstringAtIndex:1];
+	    NSLog(@"prefix: %d %d", prefix.location, prefix.length);
+//	    content = [block.match rangeOfSubstringAtIndex:2];
+	    suffix = [block.match rangeOfSubstringAtIndex:2];
+	    
+	    if (prefix.length == 1) {
+	      attributes = h1Attributes;
+	    } else {
+	      attributes = h2Attributes;
+	    }
+	  }
 	  
-	  NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] bold:true];
-	  //(headerPrefix.length == 1)];
+	  NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:prefix.length];
 	  [line addAttribute:NSFontAttributeName value:font range:content];
 	  [line addAttributes:attributes range:content];
+
 	  // need to mark suffix too
-	  // [self markAsMeta:line range:[match rangeOfSubstringAtIndex:3]];
+	  if (suffix.location != NSNotFound && suffix.length > 0) {
+	    int size = [self fontSizeOfString:line atIndex:prefix.location];
+	    [self markAsMeta:line range:suffix size:size];
+	  }
+	} else if (block.type == setexType) {
+	  NSDictionary *attributes = h1Attributes;
+	  NSString *delimiter = [block.match substringAtIndex:1];
+	  bool isH1 = [delimiter isEqualToString:@"="];
+	  if (!isH1) attributes = h2Attributes;
+	  NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:(isH1?1:2)];
+	  [line addAttribute:NSFontAttributeName value:font range:content];
+	  [line addAttributes:attributes range:content];
 	} else if (block.type == quoteType) {
 	  [line addAttributes:blockquoteAttributes range:content];
 	} else if (block.type == hrType) {
@@ -676,9 +702,10 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   stack = [NSMutableArray array];
 
 //  for (NSTextStorage *l in [storage paragraphs]) {
-  for (OGRegularExpressionMatch *match in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
-    NSRange lRange = [match rangeOfMatchedString];
+  for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
+    NSRange lRange = [lineMatch rangeOfMatchedString];
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
+    OGRegularExpressionMatch *match;
 
     [self popLineBlocks:stack];
 
@@ -709,12 +736,12 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       
     } else if (!newPara && (match = [setex matchInAttributedString:string range:lineRange])) { // SETEX header
       prevStack = [NSMutableArray array];
-      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:headerType indent:0 prefix:0]];
+      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
       [self markLine:string range:prevRange stack:prevStack];
 
       prevStack = [NSMutableArray array];
       NSRange mRange = [match rangeOfMatchedString];
-      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:headerType indent:0 prefix:mRange.length]];
+      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:headerType indent:0 prefix:mRange.length match:match]];
       prevRange = lineRange;	     // whole line, not subsection
 
       continue;
@@ -733,7 +760,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       [process removeObjectAtIndex:0];
       
       if (match = [regex matchInAttributedString:string range:lineRange]) {
-	NSRange mRange = [match rangeOfMatchedString];
+	NSRange mRange = [match rangeOfSubstringAtIndex:1];
+	if (mRange.location == NSNotFound) mRange = [match rangeOfMatchedString];
 	
 	[self pushParagraphBlock:stack block:[MDBlock blockWithType:type indent:indent prefix:mRange.length match:match]];
 	indent += mRange.length;
