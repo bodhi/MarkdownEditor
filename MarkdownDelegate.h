@@ -31,9 +31,13 @@
     OGRegularExpression *attachedImage;
     OGRegularExpression *attachmentNoImage;
 
-    OGRegularExpression *inlinePattern, *link, *image, *header, *blockquoteRegex, *codeBlockRegex, *listRegex, *refRegex, *hrRegex;
+    OGRegularExpression *inlinePattern, *linkRegex, *image, *atx, *blank, *indented;
 
     IBOutlet MarkdownDocument *document;
+
+    NSArray *mainOrder, *lineBlocks;
+
+    NSDictionary *blocks;
 }
 
 @property (assign) IBOutlet NSTextView *text;
