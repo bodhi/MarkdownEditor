@@ -181,17 +181,22 @@ static NSString *setexType = @"setex";
   // \[(.*?)\] # title
   // \((.*?)\) # url
   
-  NSString *urlSuffix = @"\\((\\S+)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
+  NSString *urlSuffix = @"\\((\\S+?)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
   NSString *refSuffix = @"\\[(.+?)\\]"; // 1: reference
-  NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix]; // 1: suffix
-
-  NSString *baseRegex = [NSString stringWithFormat:@"\\[(.+?)\\]%@", linkSuffix]; // 1: text, 2 suffix
+  // 1: suffix, 2: url, 3: title, 4: ref
+  NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix]; 
+  
+  // 1: text, 2: suffix, 3: url, 4: title, 5: ref
+  NSString *baseRegex = [NSString stringWithFormat:@"\\[(.+?)\\]%@", linkSuffix];
 
   imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"!%@", baseRegex]];
+
+  // 1: text, 2: suffix, 3: url, 4: title, 5: ref
   attachedImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"!%@%@", attachmentChar, baseRegex]];
 
   // ! with attachment char and no image markup, or attachment char with markup but no leading !
-  attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"([^!]%@%@|!%@(?!%@))", attachmentChar, baseRegex, attachmentChar, baseRegex]];
+  // 1: attachment 2: text, 3: suffix, 5: url, 5: title, 6: ref, 7: attachment
+  attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?:[^!](%@)%@|!(%@)(?!%@))", attachmentChar, baseRegex, attachmentChar, baseRegex]];
   
   // ! (optional attachment char) [title] (uri)
   NSString *imageString = [NSString stringWithFormat:@"!%@?%@", attachmentChar, baseRegex];
@@ -273,10 +278,9 @@ static NSString *setexType = @"setex";
 }
 
 - (int)attachImage:(NSString *)imageSrc toString:(NSMutableAttributedString *)target atIndex:(int) index {
-  return 0;
 //  NSLog(@"Image with src %@", imageSrc);
   
-  NSError *error;
+  NSError *error = nil;
 //	if (document) 
 //	  NSLog(@"Doc: %@", [document fileURL]);
   NSURL *url = [NSURL URLWithString:imageSrc relativeToURL:[document fileURL]];
@@ -314,8 +318,7 @@ static NSString *setexType = @"setex";
   if (url != nil) {
     [references setObject:url forKey:ref];
     newReferences = true;
-  }
-  
+  }  
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -326,28 +329,42 @@ static NSString *setexType = @"setex";
 
   // find attachment with no markup
   for (match in [attachmentNoImage matchEnumeratorInString:stString]) {
+    // 1: attachment 2: text, 3: suffix, 5: url, 5: title, 6: ref, 7: attachment
+    
     // remove attachment
-    //    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
-    [storage replaceCharactersInRange:NSMakeRange([match rangeOfMatchedString].location + 1, 1) withString:@""];
+//    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
+    NSRange early = [match rangeOfSubstringAtIndex:1];
+    NSRange late = [match rangeOfSubstringAtIndex:7];
+    if (early.location != NSNotFound) [storage replaceCharactersInRange:early withString:@""];
+    if (late.location != NSNotFound) [storage replaceCharactersInRange:late withString:@""];
   }
   
   // find image with attachment char
   // Do this before adding attachments so incorrect images get fixed
   for (match in [attachedImage matchEnumeratorInString:stString]) {
+    // 1: text, 2: suffix, 3: url, 4: title, 5: ref
+
     NSRange imageRange = [match rangeOfMatchedString];
-    //    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
-    NSString *src = [self urlForReference:[match substringAtIndex:2]];
+//    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
+    
+    NSRange urlRange = [match rangeOfSubstringAtIndex:3];
+    NSString *src;
+    if (urlRange.length > 0) {
+      src = [match substringAtIndex:3];
+    } else {
+      src = [[self urlForReference:[match substringAtIndex:5]] absoluteString];
+    }
 
     int attachmentIndex = imageRange.location + 1;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentIndex effectiveRange:nil];
-    //    NSLog(@"THE ATTACHMENT %@", attachment);
-
+//    NSLog(@"THE ATTACHMENT %@", attachment);
+    
     // validate attachment src
     if (![src isEqualToString:[[attachment fileWrapper] filename]]) {
       [storage replaceCharactersInRange:NSMakeRange(attachmentIndex, 1) withString:@""];
-      //      NSLog(@"attachment different to source, stripped");
+//      NSLog(@"attachment different to source, stripped");
     } else {
-      //      NSLog(@"attachment name same as source");
+//      NSLog(@"attachment name same as source");
     }
   }
 
@@ -355,14 +372,23 @@ static NSString *setexType = @"setex";
   // Do this after removing attachments with incorrect images
   int attachmentCompensation = 1;
   for (match in [imageNoAttachment matchEnumeratorInString:stString]) {
-    NSURL *src = [self urlForReference:[match substringAtIndex:2]];
+    // 1: text, 2: suffix, 3: url, 4: title, 5: ref
+
+    NSString *url;
+    NSRange urlRange = [match rangeOfSubstringAtIndex:3];
+    if (urlRange.length > 0) {
+      url = [match substringAtIndex:3];
+    } else {     
+      NSURL *src = [self urlForReference:[match substringAtIndex:5]];
+      url = [src absoluteString];
+    }
     // add attachment char with attachment
-    //    NSLog(@"IMAGE %@", [match matchedString]);
+//    NSLog(@"IMAGE %@", [match matchedString]);
     NSRange imageRange = [match rangeOfMatchedString];
 
     int adjustment = 0;
-    //    NSLog(@"ATTACHMENT: %@", [match substringAtIndex:2]);
-    adjustment = [self attachImage:src toString:storage atIndex:imageRange.location + attachmentCompensation];
+//    NSLog(@"ATTACHMENT: %@", url);
+    adjustment = [self attachImage:url toString:storage atIndex:imageRange.location + attachmentCompensation];
     attachmentCompensation += adjustment;
   }
   
