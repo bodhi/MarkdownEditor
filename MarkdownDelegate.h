@@ -23,10 +23,6 @@
     
     NSString *MarkdownCodeSection, *MarkdownTextSize;
 
-    NSString *imageMark;
-    NSString *baseRegex;
-    NSString *attachmentChar;
-
     OGRegularExpression *imageNoAttachment;
     OGRegularExpression *attachedImage;
     OGRegularExpression *attachmentNoImage;
@@ -38,6 +34,8 @@
     NSArray *mainOrder, *lineBlocks;
 
     NSDictionary *blocks;
+
+    bool newReferences;
 }
 
 @property (assign) IBOutlet NSTextView *text;

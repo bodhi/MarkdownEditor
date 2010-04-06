@@ -64,6 +64,7 @@ static NSString *setexType = @"setex";
   [text textStorage].delegate = self;
 
   references = [[NSMutableDictionary alloc] init];
+  newReferences = false;
   
 //  NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
@@ -157,8 +158,20 @@ static NSString *setexType = @"setex";
       ] retain];
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
-  attachmentChar = [[[NSAttributedString attributedStringWithAttachment:a] string] retain];
+  NSString *attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
+//  NSLog(@"'%@' %d", attachmentChar, [attachmentChar length]);
   [a release];
+
+  // Links & images
+  // /
+  // (?<!!|%@) # not preceded by an image delimiter
+  // \[((?:\!%@?\[.+?\]\(.+?\)|.)*?)\] # text (including any images)
+  // (                       # suffix:
+  //  \((\S+)\s*(\".+?\")?\) # url+title suffix
+  // |                       # OR
+  //  \[(.+?)\]              # reference
+  // )       
+  // /
 
   // Image tags:
   // !K?\[(.*?)\]\((.*?)\)
@@ -167,21 +180,22 @@ static NSString *setexType = @"setex";
   // K?        # optional attachment char (not k, actually \ufffc)
   // \[(.*?)\] # title
   // \((.*?)\) # url
-  imageMark = @"!";
   
-//  NSString *urlSuffix = "\\((.+?)\\)";
-//  NSString *refSuffix = "\\[(.+?)\\]";
-  
-  baseRegex = @"\\[(.*?)\\]\\((.*?)\\)";
+  NSString *urlSuffix = @"\\((\\S+)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
+  NSString *refSuffix = @"\\[(.+?)\\]"; // 1: reference
+  NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix]; // 1: suffix
 
-  imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@", imageMark, baseRegex]];
-  attachedImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@%@", imageMark, attachmentChar, baseRegex]];
+  NSString *baseRegex = [NSString stringWithFormat:@"\\[(.+?)\\]%@", linkSuffix]; // 1: text, 2 suffix
+
+  imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"!%@", baseRegex]];
+  attachedImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"!%@%@", attachmentChar, baseRegex]];
 
   // ! with attachment char and no image markup, or attachment char with markup but no leading !
-  attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"([^%@]%@%@|%@%@(?!%@))", imageMark, attachmentChar, baseRegex, imageMark, attachmentChar, baseRegex]];
+  attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"([^!]%@%@|!%@(?!%@))", attachmentChar, baseRegex, attachmentChar, baseRegex]];
   
   // ! (optional attachment char) [title] (uri)
-  image = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"%@%@?%@", imageMark, attachmentChar, baseRegex]];
+  NSString *imageString = [NSString stringWithFormat:@"!%@?%@", attachmentChar, baseRegex];
+  image = [[OGRegularExpression alloc] initWithString:imageString];
 
   // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
   inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)([*_`]{1,2})((?!\\1).*?[^\\\\])(\\1)"];
@@ -199,7 +213,10 @@ static NSString *setexType = @"setex";
   //    \((.*?)\) # capture url
 //  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
 
-  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.+?\\]\\(.+?\\)|.)*?)\\](\\((\\S+)\\s*(\\\".+?\\\")?\\)|\\[(.+?)\\])", attachmentChar, attachmentChar]];
+//  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.+?\\]\\(.+?\\)|.)*?)\\](\\((\\S+)\\s*(\\\".+?\\\")?\\)|\\[(.+?)\\])", attachmentChar, attachmentChar]];
+
+//  NSLog(@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix);
+  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix]];
 
   ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setMinimumLineHeight:lineHeight];
@@ -291,8 +308,14 @@ static NSString *setexType = @"setex";
 }
 
 - (void)addReference:(NSString *)urlString forKey:ref {
+  NSLog(@"Reference for '%@': %@", ref, urlString);
   NSURL *url = [NSURL URLWithString:urlString];
-  if (url != nil) [references setObject:url forKey:ref];
+  NSLog(@"URL '%@'", url);
+  if (url != nil) {
+    [references setObject:url forKey:ref];
+    newReferences = true;
+  }
+  
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -512,22 +535,22 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   for (OGRegularExpressionMatch *match in [linkRegex matchEnumeratorInAttributedString:string range:range]) {
     NSRange mRange = [match rangeOfMatchedString];
     NSRange textRange = [match rangeOfSubstringAtIndex:1];
-    NSRange urlRange = [match rangeOfSubstringAtIndex:3];
-    NSString *urlString = [match substringAtIndex:3];
+    NSRange suffix = [match rangeOfSubstringAtIndex:7];
+    NSRange urlRange = [match rangeOfSubstringAtIndex:8];
+    NSString *urlString = [match substringAtIndex:8];
     // Do nothing with title for now
-    // NSString *title = [match substringAtIndex:4];
+    // NSString *title = [match substringAtIndex:9];
 
-    NSRange refRange = [match rangeOfSubstringAtIndex:5];
-    NSString *ref = [match substringAtIndex:5];
+    NSRange refRange = [match rangeOfSubstringAtIndex:10];
+    NSString *ref = [match substringAtIndex:10];
     NSURL *url = nil;
     if (urlRange.length > 0) {
       url = [NSURL URLWithString:urlString];
     } else {
       url = [self urlForReference:ref];
     }
-    NSLog(@"'%@' '%@' '%@' '%@'", [match matchedString], [match substringAtIndex:3], urlString, url);
+//    NSLog(@"'%@': text:'%@' suffix:'%@' url:'%@' title:'%@' ref:'%@'", [match matchedString], [match substringAtIndex:1], [match substringAtIndex:7], [match substringAtIndex:8], [match substringAtIndex:9], [match substringAtIndex:10]);
 
-    NSRange suffix = [match rangeOfSubstringAtIndex:2];
     suffix.location -= 2;	// '](' before url+title|ref and...
     suffix.length += 3;		// ) after
 
@@ -600,6 +623,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     while ([localStack count] > 0) {
       MDBlock *block = [localStack objectAtIndex:0];
       [localStack removeObjectAtIndex:0];
+
     
       prefix = NSMakeRange(range.location + block.indent, block.prefixLength);
       if (prefix.length > range.length - block.indent) prefix.length = range.length - block.indent;
@@ -608,7 +632,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
       if (prefix.length > 0) [self markAsMeta:line range:prefix];
 
-      if (content.length > 0) {
+//      if (content.length > 0) {
 //	NSLog(@"%@: '%@' %d %d", block, [line string], prefix.length, all.length);
 //	NSLog(@"%@ (%d %d): %@", stack, range.location, range.length, [[line attributedSubstringFromRange:content] string]);
 
@@ -662,8 +686,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	  [self addReference:url forKey:ref];
 	} else {
 	  // other types
+	  NSLog(@"Dunno what to do with type '%@'", block.type);
 	}
-      }
+//    }
     }
 
     if (content.length > 0) [self markInlineElementsIn:line range:content];
@@ -793,10 +818,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	indent += mRange.length;
 	order = process;
 
-//	NSLog(@"%@ %d %d: %d %d", type, lineRange.location, lineRange.length, mRange.location, mRange.length);
 	lineRange = NSMakeRange(lineRange.location + mRange.length, lineRange.length - mRange.length);
-
-
       }
     }
     
@@ -810,6 +832,11 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       block.prefixLength = 0;
     }
     
+  }
+  if (newReferences) {
+    [self markLinks:string range:NSMakeRange(0, [string length])];
+    [self markImages:string range:NSMakeRange(0, [string length])];
+    newReferences = false;
   }
 
   if (prevRange.length > 0 && prevStack != nil)
