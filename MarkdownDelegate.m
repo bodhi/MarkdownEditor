@@ -193,7 +193,9 @@ static NSString *setexType = @"setex";
   //      *?)                 # zero or more of above
   //    \] # end anchor text
   //    \((.*?)\) # capture url
-  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
+//  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
+
+  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((\\S+)\\s*(\\\".+?\\\")?\\)", attachmentChar, attachmentChar]];
 
   ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setMinimumLineHeight:lineHeight];
@@ -219,7 +221,7 @@ static NSString *setexType = @"setex";
 											   @"^\\d+\\.\\s+|\\*\\s+"],
 						   headerType, listType, nil], listType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*$"],
+											   @"^(\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*)$"],
 						   nil], refType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(#+)\\s+[^#]*(#*)"],
@@ -503,12 +505,18 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     NSRange textRange = [match rangeOfSubstringAtIndex:1];
     NSRange urlRange = [match rangeOfSubstringAtIndex:2];
     NSString *urlString = [match substringAtIndex:2];
+    // Do nothing with title for now
+    // NSString *title = [match substringAtIndex:3];
     NSURL *url = [NSURL URLWithString:[self urlForLink:urlString]];
     NSLog(@"'%@' '%@'", urlString, url);
 
+    // '](' before url+title and ')' after
+    NSRange suffix = NSMakeRange(urlRange.location - 2, 0);
+    suffix.length = mRange.location + mRange.length - suffix.location;
+
     if (urlRange.location != NSNotFound && textRange.location != NSNotFound && url != nil) {
-      [self markAsMeta:string range:NSMakeRange(mRange.location, 1)];
-      [self markAsMeta:string range:NSMakeRange(urlRange.location - 2, urlRange.length + 3)]; // '](' before url and ')' after
+      [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
+      [self markAsMeta:string range:suffix];
       [string addAttribute:NSLinkAttributeName value:url range:textRange];
     }
   }
@@ -595,8 +603,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 	  if (block.match != nil) {
 	    prefix = [block.match rangeOfSubstringAtIndex:1];
-	    NSLog(@"prefix: %d %d", prefix.location, prefix.length);
-//	    content = [block.match rangeOfSubstringAtIndex:2];
 	    suffix = [block.match rangeOfSubstringAtIndex:2];
 	    
 	    if (prefix.length == 1) {
@@ -626,18 +632,17 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	} else if (block.type == quoteType) {
 	  [line addAttributes:blockquoteAttributes range:content];
 	} else if (block.type == hrType) {
-	  [line addAttributes:hrAttributes range:range];
+	  [line addAttributes:hrAttributes range:prefix];
 	} else if (block.type == refType) {
-//	  OGRegularExpressionMatch *match = block.match
-//	  NSString *ref = [match substringAtIndex:1];
-//	  NSString *url = [match substringAtIndex:2];
-	  // NSString *title = [match substringAtIndex:3];
-//	  [references setObject:url forKey:ref];
+	  OGRegularExpressionMatch *match = block.match;
+	  NSString *ref = [match substringAtIndex:2];
+	  NSString *url = [match substringAtIndex:3];
+	  //NSString *title = [match substringAtIndex:4];
+	  [references setObject:url forKey:ref];
 	} else {
-	  // other type
+	  // other types
 	}
       }
-//      range = NSMakeRange(content.location, content.length);
     }
 
     if (content.length > 0) [self markInlineElementsIn:line range:content];
