@@ -31,7 +31,7 @@
     OGRegularExpression *attachedImage;
     OGRegularExpression *attachmentNoImage;
 
-    OGRegularExpression *inlinePattern, *linkRegex, *image, *atx, *blank, *indented;
+    OGRegularExpression *inlinePattern, *linkRegex, *image, *setex, *blank, *indented;
 
     IBOutlet MarkdownDocument *document;
 
