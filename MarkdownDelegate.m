@@ -703,19 +703,33 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   return indent;
 }
 
+- (NSRange) range:(NSRange) range constrainedTo:(NSAttributedString *)string {
+  int length = [string length];
+  if (range.location < 0) range.location = 0;
+  if (range.location >= length) range.location = length == 0 ? 0 : length - 1;
+
+  if (range.location + range.length > length) range.length = length - range.location;
+  
+  return range;
+}
+
 - (NSRange) expandRangeToParagraph:(NSRange) range forString:(NSAttributedString *)string {
   NSString *haystack = [string string];
   NSString *needle = @"\n\n";
   
-  NSRange prev = NSMakeRange(0, range.location);
-  NSRange next = NSMakeRange(range.location + range.length, 0);
+  // Include current position in search
+  NSRange prev = [self range:NSMakeRange(0, range.location + 1) constrainedTo:string];
+  NSRange next = NSMakeRange(range.location + range.length - 1, 0);
   next.length = [haystack length] - next.location;
+  next = [self range:next constrainedTo:string];
 
   prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
   next = [haystack rangeOfString:needle options:0 range:next];
-  
-  range.location = prev.location == NSNotFound ? 0 : prev.location;
-  range.length = (next.location == NSNotFound ? [haystack length] : next.location) - range.location;
+
+  // Add one to get to the middle of \n\n, ie. the start of the blank
+  // line, not the end of the previous paragraph
+  range.location = prev.location == NSNotFound ? 0 : prev.location + 1;
+  range.length = (next.location == NSNotFound ? [haystack length] : next.location + 1) - range.location;
   
   return range;
 }
