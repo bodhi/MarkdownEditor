@@ -30,7 +30,7 @@ static NSString *setexMarkerType = @"setexMarker";
 @property(assign) int indent;
 @property(assign) int prefixLength;
 @end
-@implementation MDBlock 
+@implementation MDBlock
 @synthesize type;
 @synthesize indent;
 @synthesize prefixLength;
@@ -66,12 +66,12 @@ static NSString *setexMarkerType = @"setexMarker";
 
   references = [[NSMutableDictionary alloc] init];
   newReferences = false;
-  
+
 //  NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
   MarkdownCodeSection = @"MarkdownCodeSection";
   MarkdownTextSize = @"MarkdownSectionTextSize";
-  
+
   NSNumber *bigSize = [NSNumber numberWithInt:24];
   NSNumber *codeSize = [NSNumber numberWithInt:12];
   NSNumber *quoteSize = [NSNumber numberWithInt:14];
@@ -93,15 +93,15 @@ static NSString *setexMarkerType = @"setexMarker";
 //  NSFont *big = [NSFont userFontOfSize:24];
   NSFont *normal = [NSFont userFontOfSize:14];
 //  NSFont *code = [NSFont userFixedPitchFontOfSize:12];
-  metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
-				    grey, NSForegroundColorAttributeName, 
-//				  normal, NSFontAttributeName, 
+  metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
+				    grey, NSForegroundColorAttributeName,
+//				  normal, NSFontAttributeName,
 				  nil
       ] retain];
-  
+
   ps = [[NSMutableParagraphStyle alloc] init];
   [ps setLineBreakMode:NSLineBreakByTruncatingTail];
-  codeAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  codeAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 			     [NSColor colorWithCalibratedWhite:0.95 alpha:1.0], NSBackgroundColorAttributeName,
 				  ps, NSParagraphStyleAttributeName,
 //				  code, NSFontAttributeName,
@@ -109,12 +109,12 @@ static NSString *setexMarkerType = @"setexMarker";
 				  nil
       ] retain];
 
-  strongAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  strongAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //					[fontManager convertFont:normal toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
 				    nil
       ] retain];
 
-  emAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  emAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //				    [fontManager convertFont:normal toHaveTrait:NSFontItalicTrait], NSFontAttributeName,
 				nil
       ] retain];
@@ -124,7 +124,7 @@ static NSString *setexMarkerType = @"setexMarker";
 //  [ps setMinimumLineHeight:lineHeight];
 //  [ps setMaximumLineHeight:lineHeight];
 //  [ps setParagraphSpacingBefore:lineHeight];
-  h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //				    [fontManager convertFont:big toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
 				  bigSize, MarkdownTextSize,
 				ps, NSParagraphStyleAttributeName,
@@ -132,7 +132,7 @@ static NSString *setexMarkerType = @"setexMarker";
 				nil
       ] retain];
 
-  h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //				  big, NSFontAttributeName,
 				ps, NSParagraphStyleAttributeName,
 				  bigSize, MarkdownTextSize,
@@ -142,7 +142,7 @@ static NSString *setexMarkerType = @"setexMarker";
 
   ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setMaximumLineHeight:12];
-  blankAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  blankAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				     ps, NSParagraphStyleAttributeName,
 				   //    [NSColor redColor], NSBackgroundColorAttributeName,
 				   nil
@@ -151,7 +151,7 @@ static NSString *setexMarkerType = @"setexMarker";
   ps = [[NSMutableParagraphStyle alloc] init];
 //  [ps setMinimumLineHeight:lineHeight];
 //  [ps setMaximumLineHeight:lineHeight];
-  defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys: 
+  defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				       ps, NSParagraphStyleAttributeName,
 				     normal, NSFontAttributeName,
 				     //    [NSColor redColor], NSBackgroundColorAttributeName,
@@ -172,7 +172,7 @@ static NSString *setexMarkerType = @"setexMarker";
   //  \((\S+)\s*(\".+?\")?\) # url+title suffix
   // |                       # OR
   //  \[(.+?)\]              # reference
-  // )       
+  // )
   // /
 
   // Image tags:
@@ -182,12 +182,12 @@ static NSString *setexMarkerType = @"setexMarker";
   // K?        # optional attachment char (not k, actually \ufffc)
   // \[(.*?)\] # title
   // \((.*?)\) # url
-  
+
   NSString *urlSuffix = @"\\((\\S+?)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
   NSString *refSuffix = @"\\[(.+?)\\]"; // 1: reference
   // 1: suffix, 2: url, 3: title, 4: ref
-  NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix]; 
-  
+  NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix];
+
   // 1: text, 2: suffix, 3: url, 4: title, 5: ref
   NSString *baseRegex = [NSString stringWithFormat:@"\\[(.*?)\\]%@", linkSuffix];
 
@@ -199,7 +199,7 @@ static NSString *setexMarkerType = @"setexMarker";
   // ! with attachment char and no image markup, or attachment char with markup but no leading !
   // 1: attachment 2: text, 3: suffix, 5: url, 5: title, 6: ref, 7: attachment
   attachmentNoImage = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?:[^!](%@)%@|!(%@)(?!%@))", attachmentChar, baseRegex, attachmentChar, baseRegex]];
-  
+
   // ! (optional attachment char) [title] (uri)
   NSString *imageString = [NSString stringWithFormat:@"!%@?%@", attachmentChar, baseRegex];
   image = [[OGRegularExpression alloc] initWithString:imageString];
@@ -209,7 +209,7 @@ static NSString *setexMarkerType = @"setexMarker";
 
   // Link tags
   // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
-  // explained: 
+  // explained:
   //    (?<!!)  # doesn't have a ! before the [ (or attachment char)
   //    \[ # start of anchor text
   //    (                     # capture...
@@ -234,9 +234,9 @@ static NSString *setexMarkerType = @"setexMarker";
 				normal, NSFontAttributeName,
 				nil
       ] retain];
-  
 
-// blocks = { 
+
+// blocks = {
 //   :list => [/^(?:\d+\.\s*|\*\s*)/, :header, :list],
 //   :ref => /^\s*\[(.+?)\]:\s*(\S+)\s*(\".+?\")?\s*$/,
 //   :header => /^#+\s+/,
@@ -281,9 +281,9 @@ static NSString *setexMarkerType = @"setexMarker";
 
 - (int)attachImage:(NSURL *)url toString:(NSMutableAttributedString *)target atIndex:(int) index {
 //  NSLog(@"Image with src %@", imageSrc);
-  
+
   NSError *error = nil;
-//	if (document) 
+//	if (document)
 //	  NSLog(@"Doc: %@", [document fileURL]);
 //  NSLog(@"URL scheme: %@", [url scheme]);
   if (url && [[url scheme] isEqualToString:@"file"]) {
@@ -292,7 +292,7 @@ static NSString *setexMarkerType = @"setexMarker";
 //      NSLog(@"Wrapper: %@ error: %@", wrapper, error);
       NSTextAttachment *img = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
       NSAttributedString *imageString = [NSAttributedString attributedStringWithAttachment:img];
-      
+
 //      NSLog(@"INSERTING %@ of length %d", imageString, [imageString length]);
       [target beginEditing];
       [target insertAttributedString:imageString atIndex:index];
@@ -315,7 +315,7 @@ static NSString *setexMarkerType = @"setexMarker";
   if (urlString != nil) {
     [references setObject:urlString forKey:ref];
     newReferences = true;
-  }  
+  }
 }
 
 - (NSString *)urlStringForString:(NSString *)urlString orReference:(NSString *)reference {
@@ -340,7 +340,7 @@ static NSString *setexMarkerType = @"setexMarker";
   // find attachment with no markup
   for (match in [attachmentNoImage matchEnumeratorInString:stString]) {
     // 1: attachment 2: text, 3: suffix, 5: url, 5: title, 6: ref, 7: attachment
-    
+
     // remove attachment
 //    NSLog(@"ATTACHMENT NO IMAGE:%@", [match matchedString]);
     NSRange early = [match rangeOfSubstringAtIndex:1];
@@ -350,21 +350,21 @@ static NSString *setexMarkerType = @"setexMarker";
     if (late.location != NSNotFound) [storage replaceCharactersInRange:late withString:@""];
     [storage endEditing];
   }
-  
+
   // find image with attachment char
   // Do this before adding attachments so incorrect images get fixed
   int deletions = 0;
   for (match in [attachedImage matchEnumeratorInString:stString]) {
     // 1: attachment, 2: text, 3: suffix, 4: url, 5: title, 6: ref
 //    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
-    
+
     NSString *src = [self urlStringForString:[match substringAtIndex:4] orReference:[match substringAtIndex:6]];
 
     NSRange attachmentRange = [match rangeOfSubstringAtIndex:1];
     attachmentRange.location -= deletions;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentRange.location effectiveRange:nil];
 //    NSLog(@"THE ATTACHMENT %@, the src %@ the char %@", attachment, src, [match substringAtIndex:1]);
-    
+
     // validate attachment src
     if (![src isEqualToString:[[attachment fileWrapper] filename]]) {
       [storage beginEditing];
@@ -393,7 +393,7 @@ static NSString *setexMarkerType = @"setexMarker";
     adjustment = [self attachImage:url toString:storage atIndex:imageRange.location + attachmentCompensation];
     attachmentCompensation += adjustment;
   }
-  
+
 }
 
 - (bool)isCodeSection:(NSAttributedString *)string atIndex:(int) index {
@@ -466,7 +466,7 @@ static NSString *setexMarkerType = @"setexMarker";
   int size = 24 - ((level-1)/2) * 4;
 
   font = [fontManager convertFont:font toSize:size];
-  
+
   if (level % 2 == 1)
     font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
 
@@ -475,7 +475,7 @@ static NSString *setexMarkerType = @"setexMarker";
 
 - (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range size:(int)size {
   NSFont *font = [self codeFontForSize:size];
-  
+
   [string addAttribute:NSFontAttributeName value:font range:range];
   [string addAttributes:metaAttributes range:range];
 }
@@ -496,7 +496,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     } else {
       block = nil;
     }
-  }  
+  }
 }
 
 - (void) popLineBlocks:(NSMutableArray *)stack {
@@ -564,12 +564,12 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (void)markImages:(NSMutableAttributedString *)string range:(NSRange)range {
-  for (OGRegularExpressionMatch *match in [image matchEnumeratorInAttributedString:string range:range]) {    
+  for (OGRegularExpressionMatch *match in [image matchEnumeratorInAttributedString:string range:range]) {
     [self markAsMeta:string range:[match rangeOfMatchedString]];
   }
 }
 
-- (void)markInlineElementsIn:(NSMutableAttributedString *)string range:(NSRange)range {  
+- (void)markInlineElementsIn:(NSMutableAttributedString *)string range:(NSRange)range {
   if (range.length <= 2) return;
 
   for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInAttributedString:string range:range]) {
@@ -614,17 +614,17 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     NSRange prefix = NSMakeRange(0,0);
     NSRange content = NSMakeRange(range.location, range.length);
-    
+
     [self indent:line range:range for:localStack];
 
     while ([localStack count] > 0) {
       MDBlock *block = [localStack objectAtIndex:0];
       [localStack removeObjectAtIndex:0];
-    
+
       prefix = NSMakeRange(range.location + block.indent, block.prefixLength);
       if (prefix.length > range.length - block.indent) prefix.length = range.length - block.indent;
       content = NSMakeRange(prefix.location + prefix.length, 0);
-      
+
       if (range.location + range.length > content.location)
 	content.length = range.location + range.length - content.location;
 
@@ -646,14 +646,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	if (block.match != nil) {
 	  prefix = [block.match rangeOfSubstringAtIndex:1];
 	  suffix = [block.match rangeOfSubstringAtIndex:2];
-	    
+
 	  if (prefix.length == 1) {
 	    attributes = h1Attributes;
 	  } else {
 	    attributes = h2Attributes;
 	  }
 	}
-	  
+
 	NSFont *font = [self headerFontForFont:[self fontOfString:line atIndex:content.location] level:prefix.length];
 	[line addAttribute:NSFontAttributeName value:font range:content];
 	[line addAttributes:attributes range:content];
@@ -696,7 +696,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   NSRange indent = NSMakeRange(NSNotFound, 0);
   MDBlock *first = nil;
   if ([stack count] > 0) first = [stack objectAtIndex:0];
-  
+
   if (first != nil && first.type == listType && (match = [indented matchInAttributedString:string range:range]) != nil) {
     indent = [match rangeOfMatchedString];
   }
@@ -709,14 +709,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   if (range.location >= length) range.location = length == 0 ? 0 : length - 1;
 
   if (range.location + range.length > length) range.length = length - range.location;
-  
+
   return range;
 }
 
 - (NSRange) expandRangeToParagraph:(NSRange) range forString:(NSAttributedString *)string {
   NSString *haystack = [string string];
   NSString *needle = @"\n\n";
-  
+
   // Include current position in search
   NSRange prev = [self range:NSMakeRange(0, range.location + 1) constrainedTo:string];
   NSRange next = NSMakeRange(range.location + range.length - 1, 0);
@@ -730,7 +730,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   // line, not the end of the previous paragraph
   range.location = prev.location == NSNotFound ? 0 : prev.location + 1;
   range.length = (next.location == NSNotFound ? [haystack length] : next.location + 1) - range.location;
-  
+
   return range;
 }
 
@@ -739,13 +739,13 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   NSMutableAttributedString *string;
   string = storage;
   NSRange stringRange = NSMakeRange(0, [string length]);
-  
+
   NSRange edited = [storage editedRange];
   edited = [self expandRangeToParagraph:edited forString:string];
   stringRange = edited;
 
   [string beginEditing];
-  
+
   [string removeAttribute:NSParagraphStyleAttributeName range:stringRange];
   [string removeAttribute:NSFontAttributeName range:stringRange];
   [string removeAttribute:NSForegroundColorAttributeName range:stringRange];
@@ -793,7 +793,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       } else {
 	stack = [NSMutableArray array];
       }
-      
+
     } else if (!newPara && (match = [setex matchInAttributedString:string range:lineRange])) { // SETEX header
       prevStack = [NSMutableArray array];
       [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
@@ -814,11 +814,11 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     while ([order count] > 0) {
       type = [order objectAtIndex:0];
       [order removeObjectAtIndex:0];
-      
+
       NSMutableArray *process = [NSMutableArray arrayWithArray:[blocks objectForKey:type]];
       OGRegularExpression *regex = [process objectAtIndex:0];
       [process removeObjectAtIndex:0];
-      
+
       if (match = [regex matchInAttributedString:string range:lineRange]) {
 	NSRange mRange = [match rangeOfSubstringAtIndex:1];
 	if (mRange.location == NSNotFound) mRange = [match rangeOfMatchedString];
@@ -830,7 +830,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	lineRange = NSMakeRange(lineRange.location + mRange.length, lineRange.length - mRange.length);
       }
     }
-    
+
     prevRange = lRange;
     prevStack = [NSMutableArray array];
     MDBlock *new;
@@ -840,7 +840,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 //      block.indent += block.prefixLength;
       block.prefixLength = 0;
     }
-    
+
   }
 
   if (prevRange.length > 0 && prevStack != nil)
