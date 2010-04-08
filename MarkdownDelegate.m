@@ -356,14 +356,14 @@ static NSString *setexMarkerType = @"setexMarker";
   int deletions = 0;
   for (match in [attachedImage matchEnumeratorInString:stString]) {
     // 1: attachment, 2: text, 3: suffix, 4: url, 5: title, 6: ref
-    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
+//    NSLog(@"IMAGE WITH ATTACHMENT: %@", [match matchedString]);
     
     NSString *src = [self urlStringForString:[match substringAtIndex:4] orReference:[match substringAtIndex:6]];
 
     NSRange attachmentRange = [match rangeOfSubstringAtIndex:1];
     attachmentRange.location -= deletions;
     NSTextAttachment *attachment = [storage attribute:NSAttachmentAttributeName atIndex:attachmentRange.location effectiveRange:nil];
-    NSLog(@"THE ATTACHMENT %@, the src %@ the char %@", attachment, src, [match substringAtIndex:1]);
+//    NSLog(@"THE ATTACHMENT %@, the src %@ the char %@", attachment, src, [match substringAtIndex:1]);
     
     // validate attachment src
     if (![src isEqualToString:[[attachment fileWrapper] filename]]) {
@@ -371,9 +371,9 @@ static NSString *setexMarkerType = @"setexMarker";
       [storage replaceCharactersInRange:attachmentRange withString:@""];
       deletions += 1;
       [storage endEditing];
-      NSLog(@"attachment different to source, stripped");
+//      NSLog(@"attachment different to source, stripped");
     } else {
-      NSLog(@"attachment name same as source");
+//      NSLog(@"attachment name same as source");
     }
   }
 
@@ -471,10 +471,6 @@ static NSString *setexMarkerType = @"setexMarker";
   return font;
 }
 
-// - (int)occurencesOf:(NSString *)divider in:(NSString *)target {
-//   return [[target componentsSeparatedByString:divider] count] - 1;
-// }
-
 - (void)markAsMeta:(NSMutableAttributedString *)string range:(NSRange)range size:(int)size {
   NSFont *font = [self codeFontForSize:size];
   
@@ -501,9 +497,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   }  
 }
 
-// def pop_line_blocks stack
-//   stack.pop until stack.empty? or !@line_blocks.include? stack.last.first
-// end
 - (void) popLineBlocks:(NSMutableArray *)stack {
 
   [self popBlocks:stack checkFn:^(MDBlock *block) {
@@ -511,9 +504,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     }];
 }
 
-// def pop_indented_paragraph_blocks stack, indent
-//   stack.pop until stack.empty? or (stack.last.last == indent and stack.last.first == :list)
-// end
 - (void) popIndentedBlocks:(NSMutableArray *)stack indent:(int)indent {
   [self popBlocks:stack checkFn:^(MDBlock *block) {
       return (bool) (block.type != listType || block.indent + block.prefixLength > indent);
@@ -643,9 +633,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
       if (block.type == codeType) {
 	[line addAttributes:codeAttributes range:range];
-//	NSLog(@"Not marking code tooltip");
+	//	NSLog(@"Not marking code tooltip");
 	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
-	//      NSLog(@"%@", [storage string]);
+	// NSLog(@"%@", [storage string]);
 	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
       } else if (block.type == headerType) {
 	NSDictionary *attributes = h1Attributes;
@@ -691,7 +681,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	[self addReference:url forKey:ref];
       } else {
 	// other types
-//	  NSLog(@"Dunno what to do with type '%@'", block.type);
+	//NSLog(@"Dunno what to do with type '%@'", block.type);
       }
     }
 
@@ -756,7 +746,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   int indent = 0;
   stack = [NSMutableArray array];
 
-//  for (NSTextStorage *l in [storage paragraphs]) {
   for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
     NSRange lRange = [lineMatch rangeOfMatchedString];
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
