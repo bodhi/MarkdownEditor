@@ -7,9 +7,11 @@
 //
 
 #import "MarkdownDocument.h"
+#import "OgreKit/OgreKit.h"
 
 @implementation MarkdownDocument
 @synthesize string;
+@synthesize attachmentChar;
 
 - (id)init
 {
@@ -37,7 +39,8 @@
 
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError
 {
-  return [[textView string] dataUsingEncoding:NSUTF8StringEncoding];
+  OGRegularExpression *regex = [OGRegularExpression regularExpressionWithString:attachmentChar];
+  return [[regex replaceAllMatchesInString:[textView string] withString:@""] dataUsingEncoding:NSUTF8StringEncoding];
 
   if ( outError != NULL ) {
     *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:unimpErr userInfo:NULL];
@@ -48,15 +51,15 @@
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError
 {
   NSString *content = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-  self.string = [[NSMutableAttributedString alloc] initWithString:content];
-  [[textView textStorage] setAttributedString: self.string];
-
-  if ( outError != NULL ) {
+  if (content != nil) {
+    self.string = [[NSMutableAttributedString alloc] initWithString:content];
+    [[textView textStorage] setAttributedString: self.string];
+    [content release];
+    return YES;
+  } else {
     *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:unimpErr userInfo:NULL];
+    return NO;
   }
-  [content release];
-
-  return YES;
 }
 
 @end

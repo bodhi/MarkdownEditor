@@ -14,7 +14,9 @@
   IBOutlet NSTextView *textView;
 
   NSMutableAttributedString *string;
+  NSString *attachmentChar;
 }
 
 @property(retain) NSMutableAttributedString *string;
+@property(retain) NSString *attachmentChar;
 @end

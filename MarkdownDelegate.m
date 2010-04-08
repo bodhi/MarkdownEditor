@@ -160,6 +160,7 @@ static NSString *setexMarkerType = @"setexMarker";
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
   NSString *attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
+  document.attachmentChar = attachmentChar;
 //  NSLog(@"'%@' %d", attachmentChar, [attachmentChar length]);
   [a release];
 
