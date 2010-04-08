@@ -205,7 +205,7 @@ static NSString *setexMarkerType = @"setexMarker";
   image = [[OGRegularExpression alloc] initWithString:imageString];
 
   // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
-  inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)([*_`]{1,2})((?!\\1).*?[^\\\\])(\\1)"];
+  inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)(([*_`])\\2?)(.+?)((?<!\\\\)\\1)"];
 
   // Link tags
   // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
@@ -568,13 +568,13 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (void)markInlineElementsIn:(NSMutableAttributedString *)string range:(NSRange)range {  
-//  if (range.length <= 0) return;
+  if (range.length <= 2) return;
 
   for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInAttributedString:string range:range]) {
     NSRange mRange = [match rangeOfMatchedString];
     NSDictionary *attribs = nil;
     NSString *delimiter = [match substringAtIndex:1];
-    NSFont *font = [self fontOfString:string atIndex:mRange.location];
+    NSFont *font = [self fontOfString:string atIndex:[match rangeOfSubstringAtIndex:3].location];
     if (![self isCodeSection:string atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
       if ([delimiter isEqualToString:@"`"] ||
 	  [delimiter isEqualToString:@"``"]) { // code span
@@ -594,8 +594,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       [string addAttribute:NSFontAttributeName value:font range:mRange];
       [string addAttributes:attribs range:mRange];
       [self markAsMeta:string range:[match rangeOfSubstringAtIndex:1]];
-      [self markAsMeta:string range:[match rangeOfSubstringAtIndex:3]];
-      [self markInlineElementsIn:string range:[match rangeOfSubstringAtIndex:2]];
+      [self markAsMeta:string range:[match rangeOfSubstringAtIndex:4]];
+      if (attribs != codeAttributes) [self markInlineElementsIn:string range:[match rangeOfSubstringAtIndex:3]];
     }
   }
 
