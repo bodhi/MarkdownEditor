@@ -189,7 +189,7 @@ static NSString *setexMarkerType = @"setexMarker";
   NSString *linkSuffix = [NSString stringWithFormat:@"(%@|%@)", urlSuffix, refSuffix]; 
   
   // 1: text, 2: suffix, 3: url, 4: title, 5: ref
-  NSString *baseRegex = [NSString stringWithFormat:@"\\[(.+?)\\]%@", linkSuffix];
+  NSString *baseRegex = [NSString stringWithFormat:@"\\[(.*?)\\]%@", linkSuffix];
 
   imageNoAttachment = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"!%@", baseRegex]];
 
