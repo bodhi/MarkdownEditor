@@ -462,10 +462,12 @@ static NSString *setexMarkerType = @"setexMarker";
 - (NSFont *)headerFontForFont:(NSFont *)font level:(int) level {
   NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
-//  NSFont *font = [NSFont userFontOfSize:size];
-  font = [fontManager convertFont:font toSize:24];
+  level = level < 6 ? level : 6;
+  int size = 24 - ((level-1)/2) * 4;
+
+  font = [fontManager convertFont:font toSize:size];
   
-  if (level == 1)
+  if (level % 2 == 1)
     font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
 
   return font;
