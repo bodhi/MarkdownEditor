@@ -67,15 +67,7 @@ static NSString *setexMarkerType = @"setexMarker";
   references = [[NSMutableDictionary alloc] init];
   newReferences = false;
 
-//  NSFontManager *fontManager = [NSFontManager sharedFontManager];
-
   MarkdownCodeSection = @"MarkdownCodeSection";
-  MarkdownTextSize = @"MarkdownSectionTextSize";
-
-  NSNumber *bigSize = [NSNumber numberWithInt:24];
-  NSNumber *codeSize = [NSNumber numberWithInt:12];
-  NSNumber *quoteSize = [NSNumber numberWithInt:14];
-  NSNumber *normalSize = [NSNumber numberWithInt:14];
 
   NSMutableParagraphStyle *ps;
 //  ps = [[NSMutableParagraphStyle alloc] init];
@@ -85,17 +77,14 @@ static NSString *setexMarkerType = @"setexMarker";
   blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //					  ps, NSParagraphStyleAttributeName,
 						[NSFont fontWithName:@"Georgia-Italic" size:14], NSFontAttributeName,
-					  quoteSize, MarkdownTextSize,
 					nil
       ] retain];
 
   NSColor *grey = [NSColor lightGrayColor];
-//  NSFont *big = [NSFont userFontOfSize:24];
   NSFont *normal = [NSFont userFontOfSize:14];
-//  NSFont *code = [NSFont userFixedPitchFontOfSize:12];
+
   metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				    grey, NSForegroundColorAttributeName,
-//				  normal, NSFontAttributeName,
 				  nil
       ] retain];
 
@@ -104,38 +93,31 @@ static NSString *setexMarkerType = @"setexMarker";
   codeAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 			     [NSColor colorWithCalibratedWhite:0.95 alpha:1.0], NSBackgroundColorAttributeName,
 				  ps, NSParagraphStyleAttributeName,
-//				  code, NSFontAttributeName,
-				  [[NSObject alloc] init], MarkdownCodeSection,
+				  [[[NSObject alloc] init] autorelease], MarkdownCodeSection,
 				  nil
       ] retain];
 
   strongAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-//					[fontManager convertFont:normal toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
 				    nil
       ] retain];
 
   emAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-//				    [fontManager convertFont:normal toHaveTrait:NSFontItalicTrait], NSFontAttributeName,
 				nil
       ] retain];
 
   ps = [[NSMutableParagraphStyle alloc] init];
-  int lineHeight = 20;
+//  int lineHeight = 20;
 //  [ps setMinimumLineHeight:lineHeight];
 //  [ps setMaximumLineHeight:lineHeight];
 //  [ps setParagraphSpacingBefore:lineHeight];
   h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-//				    [fontManager convertFont:big toHaveTrait:NSFontBoldTrait], NSFontAttributeName,
-				  bigSize, MarkdownTextSize,
 				ps, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
 
   h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-//				  big, NSFontAttributeName,
 				ps, NSParagraphStyleAttributeName,
-				  bigSize, MarkdownTextSize,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
@@ -144,7 +126,6 @@ static NSString *setexMarkerType = @"setexMarker";
 //  [ps setMaximumLineHeight:12];
   blankAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				     ps, NSParagraphStyleAttributeName,
-				   //    [NSColor redColor], NSBackgroundColorAttributeName,
 				   nil
       ] retain];
 
@@ -154,34 +135,13 @@ static NSString *setexMarkerType = @"setexMarker";
   defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				       ps, NSParagraphStyleAttributeName,
 				     normal, NSFontAttributeName,
-				     //    [NSColor redColor], NSBackgroundColorAttributeName,
 				     nil
       ] retain];
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
   NSString *attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
   document.attachmentChar = attachmentChar;
-//  NSLog(@"'%@' %d", attachmentChar, [attachmentChar length]);
   [a release];
-
-  // Links & images
-  // /
-  // (?<!!|%@) # not preceded by an image delimiter
-  // \[((?:\!%@?\[.+?\]\(.+?\)|.)*?)\] # text (including any images)
-  // (                       # suffix:
-  //  \((\S+)\s*(\".+?\")?\) # url+title suffix
-  // |                       # OR
-  //  \[(.+?)\]              # reference
-  // )
-  // /
-
-  // Image tags:
-  // !K?\[(.*?)\]\((.*?)\)
-  // Explained:
-  // !         # image delimiter
-  // K?        # optional attachment char (not k, actually \ufffc)
-  // \[(.*?)\] # title
-  // \((.*?)\) # url
 
   NSString *urlSuffix = @"\\((\\S+?)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
   NSString *refSuffix = @"\\[(.+?)\\]"; // 1: reference
@@ -207,22 +167,6 @@ static NSString *setexMarkerType = @"setexMarker";
   // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
   inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)(([*_`])\\2?)(.+?)((?<!\\\\)\\1)"];
 
-  // Link tags
-  // \[((?:\!\[.*?\]\(.*?\)|.)*?)\]\((.*?)\)
-  // explained:
-  //    (?<!!)  # doesn't have a ! before the [ (or attachment char)
-  //    \[ # start of anchor text
-  //    (                     # capture...
-  //      (?:\!\[.*?\]\(.*?\) # an image,
-  //      |.)                 # or anything else
-  //      *?)                 # zero or more of above
-  //    \] # end anchor text
-  //    \((.*?)\) # capture url
-//  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.*?\\]\\(.*?\\)|.)*?)\\]\\((.*?)\\)", attachmentChar, attachmentChar]];
-
-//  linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:\\!%@?\\[.+?\\]\\(.+?\\)|.)*?)\\](\\((\\S+)\\s*(\\\".+?\\\")?\\)|\\[(.+?)\\])", attachmentChar, attachmentChar]];
-
-//  NSLog(@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix);
   linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix]];
 
   ps = [[NSMutableParagraphStyle alloc] init];
@@ -235,15 +179,6 @@ static NSString *setexMarkerType = @"setexMarker";
 				nil
       ] retain];
 
-
-// blocks = {
-//   :list => [/^(?:\d+\.\s*|\*\s*)/, :header, :list],
-//   :ref => /^\s*\[(.+?)\]:\s*(\S+)\s*(\".+?\")?\s*$/,
-//   :header => /^#+\s+/,
-//   :quote => [/^>\s+/, :header, :list, :quote],
-//   :code => /^ {4}/,
-//   :hr => /^[\t ]{,3}([-*])(?:[\t ]*\1){2,}[\t ]*$/,
-// }
   blocks = [[NSDictionary alloc] initWithObjectsAndKeys:
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
@@ -270,8 +205,10 @@ static NSString *setexMarkerType = @"setexMarker";
 
   // setex = /^([-=])\1*\s*$/
   setex = [[OGRegularExpression alloc] initWithString:@"^([-=])\\1*\\s*$"];
+
   // blank = /^\s*$/
   blank = [[OGRegularExpression alloc] initWithString:@"^\\s*$"];
+
   // @indented = /^\s+(?=\S)/
   indented = [[OGRegularExpression alloc] initWithString:@"^\\s+(?=\\S)"];
 
@@ -283,8 +220,6 @@ static NSString *setexMarkerType = @"setexMarker";
 //  NSLog(@"Image with src %@", imageSrc);
 
   NSError *error = nil;
-//	if (document)
-//	  NSLog(@"Doc: %@", [document fileURL]);
 //  NSLog(@"URL scheme: %@", [url scheme]);
   if (url && [[url scheme] isEqualToString:@"file"]) {
     NSFileWrapper *wrapper = [[NSFileWrapper alloc] initWithURL:url options:NSFileWrapperReadingWithoutMapping error:&error];
@@ -328,7 +263,7 @@ static NSString *setexMarkerType = @"setexMarker";
 
 - (NSURL *)urlForString:(NSString *)urlString orReference:(NSString *)reference {
   urlString = [self urlStringForString:urlString orReference:reference];
-  return (urlString != nil ? [NSURL URLWithString:urlString relativeToURL:[document fileURL]] : nil);;
+  return (urlString != nil ? [NSURL URLWithString:urlString relativeToURL:[document fileURL]] : nil);
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -591,7 +526,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	font = [self emphasisedFont:font];
       }
     }
-//        [string addAttribute:NSFontAttributeName value:code range:mRange];
+
     if (attribs != nil) {
       [string addAttribute:NSFontAttributeName value:font range:mRange];
       [string addAttributes:attribs range:mRange];
@@ -637,7 +572,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	[line addAttributes:codeAttributes range:range];
 	//	NSLog(@"Not marking code tooltip");
 	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
-	// NSLog(@"%@", [storage string]);
 	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
       } else if (block.type == headerType) {
 	NSDictionary *attributes = h1Attributes;

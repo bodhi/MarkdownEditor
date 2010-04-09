@@ -21,7 +21,7 @@
 
     NSMutableDictionary *references;
     
-    NSString *MarkdownCodeSection, *MarkdownTextSize;
+    NSString *MarkdownCodeSection;
 
     OGRegularExpression *imageNoAttachment;
     OGRegularExpression *attachedImage;
