@@ -164,8 +164,18 @@ static NSString *setexMarkerType = @"setexMarker";
   NSString *imageString = [NSString stringWithFormat:@"!%@?%@", attachmentChar, baseRegex];
   image = [[OGRegularExpression alloc] initWithString:imageString];
 
-  // /(?<!\\)([*_`]{1,2})((?!\1).*?[^\\])(\1)/
-  inlinePattern = [[OGRegularExpression alloc] initWithString:@"(?<!\\\\)(([*_`])\\2?)(.+?)((?<!\\\\)\\1)"];
+  inlinePattern = [[OGRegularExpression alloc] initWithString:@"\
+(?<!\\\\)              \
+(?<delimiter>          \
+  (?<delimchar>[*_`])  \
+  \\k<delimchar>?      \
+)                      \
+(?<content>.+?)        \
+(?<end_delimiter>      \
+  (?<!\\\\)            \
+  \\k<delimiter>       \
+)                      \
+" options:OgreExtendOption];
 
   linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix]];
 
@@ -485,16 +495,16 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     suffix.location -= 1;	// ']' before url+title
     suffix.length += 1;
-
-      [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
-      [self markAsMeta:string range:suffix];
-      if (url != nil) {
-	[string addAttribute:NSLinkAttributeName value:url range:textRange];
-      } else {
-	[self markAsMeta:string range:textRange];
-	[string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:urlRange];
-	[string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:refRange];
-      }
+    
+    [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
+    [self markAsMeta:string range:suffix];
+    if (url != nil) {
+      [string addAttribute:NSLinkAttributeName value:url range:textRange];
+    } else {
+      [self markAsMeta:string range:textRange];
+      [string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:urlRange];
+      [string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:refRange];
+    }
   }
 }
 
@@ -510,9 +520,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   for (OGRegularExpressionMatch *match in [inlinePattern matchEnumeratorInAttributedString:string range:range]) {
     NSRange mRange = [match rangeOfMatchedString];
     NSDictionary *attribs = nil;
-    NSString *delimiter = [match substringAtIndex:1];
-    NSFont *font = [self fontOfString:string atIndex:[match rangeOfSubstringAtIndex:3].location];
-    if (![self isCodeSection:string atIndex:[match rangeOfSubstringAtIndex:1].location]) { // don't set attributes in code blocks
+    NSString *delimiter = [match substringNamed:@"delimiter"];
+    NSFont *font = [self fontOfString:string atIndex:[match rangeOfSubstringNamed:@"content"].location];
+    if (![self isCodeSection:string atIndex:[match rangeOfSubstringNamed:@"delimiter"].location]) { // don't set attributes in code blocks
       if ([delimiter isEqualToString:@"`"] ||
 	  [delimiter isEqualToString:@"``"]) { // code span
 	attribs = codeAttributes;
@@ -530,9 +540,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     if (attribs != nil) {
       [string addAttribute:NSFontAttributeName value:font range:mRange];
       [string addAttributes:attribs range:mRange];
-      [self markAsMeta:string range:[match rangeOfSubstringAtIndex:1]];
-      [self markAsMeta:string range:[match rangeOfSubstringAtIndex:4]];
-      if (attribs != codeAttributes) [self markInlineElementsIn:string range:[match rangeOfSubstringAtIndex:3]];
+      [self markAsMeta:string range:[match rangeOfSubstringNamed:@"delimiter"]];
+      [self markAsMeta:string range:[match rangeOfSubstringNamed:@"end_delimiter"]];
+      if (attribs != codeAttributes) [self markInlineElementsIn:string range:[match rangeOfSubstringNamed:@"content"]];
     }
   }
 
