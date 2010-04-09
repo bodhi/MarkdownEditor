@@ -753,6 +753,28 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       [self markLine:string range:prevRange stack:prevStack];
     }
 
+
+    // Start with the default set of types to check (mainOrder).  If
+    // one matches, push that type on this line's stack of types,
+    // adn replace the rest of the types to check with the types that
+    // can nest inside the original matched type.
+    // 
+    // E.g. default is `(quote, list, header)` matching against "* #
+    // The header" quote doesn't match, remove it from list and move
+    // on.
+    // 
+    // List matches, so replace the rest of the types to check
+    // (currently just `(header)`) with the types that can nest in a
+    // list item `(header, list)`, and adjust the range of the string
+    // to skip the inital "* ", leaving "# The header". Push
+    // `listType` onto this line's block-type stack
+    //
+    // Try matching the list again: header matches, so replace the
+    // list with what can succeed header (in header's case, nothing.),
+    // push headerType onto the block stack, adjust the range to skip
+    // the header markup "# " and loop again.
+    //
+    // Now the list of types that this line can be is empty, so we are done.
     NSMutableArray *order = [NSMutableArray arrayWithArray:mainOrder];
     NSString *type;
     while ([order count] > 0) {
@@ -775,6 +797,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       }
     }
 
+    // Remember this line so that it's marked properly next time around
     prevRange = lRange;
     prevStack = [NSMutableArray array];
     MDBlock *new;
@@ -787,6 +810,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
   }
 
+  // Since each line is marked when it's succeeding line is parsed, we
+  // need to mark the last line of the document (which *doesn't have*
+  // a succeeding line!)
   if (prevRange.length > 0 && prevStack != nil)
     [self markLine:string range:prevRange stack:prevStack];
 
