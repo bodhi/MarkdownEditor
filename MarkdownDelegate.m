@@ -222,6 +222,8 @@ static NSString *setexMarkerType = @"setexMarker";
   // @indented = /^\s+(?=\S)/
   indented = [[OGRegularExpression alloc] initWithString:@"^\\s+(?=\\S)"];
 
+  bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
+
   mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, setexType, nil];
 }
@@ -506,6 +508,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       [string addAttribute:NSForegroundColorAttributeName value:[NSColor redColor] range:refRange];
     }
   }
+
+  for (OGRegularExpressionMatch *match in [bareLink matchEnumeratorInAttributedString:string range:range]) {
+    NSURL *url = [NSURL URLWithString:[match substringNamed:@"url"]];
+    if (url != nil) {
+      [string addAttribute:NSLinkAttributeName value:url range:[match rangeOfMatchedString]];
+    }
+  }
+
 }
 
 - (void)markImages:(NSMutableAttributedString *)string range:(NSRange)range {
