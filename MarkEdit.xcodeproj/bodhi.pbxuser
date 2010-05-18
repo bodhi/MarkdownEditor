@@ -177,20 +177,12 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 292428852;
-			PBXWorkspaceStateSaveDate = 292428852;
+			PBXPerProjectTemplateStateSaveDate = 295884242;
+			PBXWorkspaceStateSaveDate = 295884242;
 		};
 		perUserProjectItems = {
 			CF4278E7116E1C120030C2BA = CF4278E7116E1C120030C2BA /* PBXTextBookmark */;
-			CF4278E8116E1C120030C2BA = CF4278E8116E1C120030C2BA /* PlistBookmark */;
-			CF4278E9116E1C120030C2BA = CF4278E9116E1C120030C2BA /* PlistBookmark */;
-			CF6CFACE116E1C3E0088ACCC /* PlistBookmark */ = CF6CFACE116E1C3E0088ACCC /* PlistBookmark */;
-			CF6CFAD6116E1C970088ACCC /* PlistBookmark */ = CF6CFAD6116E1C970088ACCC /* PlistBookmark */;
-			CF6CFAD7116E1C970088ACCC /* XCBuildMessageTextBookmark */ = CF6CFAD7116E1C970088ACCC /* XCBuildMessageTextBookmark */;
-			CF6CFAD8116E1C970088ACCC /* PBXTextBookmark */ = CF6CFAD8116E1C970088ACCC /* PBXTextBookmark */;
-			CF6CFB05116E1DCF0088ACCC /* PBXTextBookmark */ = CF6CFB05116E1DCF0088ACCC /* PBXTextBookmark */;
-			CF6CFB0A116E1DD90088ACCC /* PBXTextBookmark */ = CF6CFB0A116E1DD90088ACCC /* PBXTextBookmark */;
-			CF6CFB14116E21E10088ACCC /* PBXTextBookmark */ = CF6CFB14116E21E10088ACCC /* PBXTextBookmark */;
+			CF6CFAD6116E1C970088ACCC = CF6CFAD6116E1C970088ACCC /* PlistBookmark */;
 		};
 		sourceControlManager = CF42662011637DB40030C2BA /* Source Control */;
 		userBuildSettings = {
@@ -307,7 +299,7 @@
 		hitCount = 0;
 		ignoreCount = 0;
 		location = libobjc.A.dylib;
-		modificationTime = 292430304.177522;
+		modificationTime = 295884327.315163;
 		originalNumberOfMultipleMatches = 1;
 		state = 1;
 		symbolName = objc_exception_throw;
@@ -322,41 +314,6 @@
 		vrLen = 45;
 		vrLoc = 0;
 	};
-	CF4278E8116E1C120030C2BA /* PlistBookmark */ = {
-		isa = PlistBookmark;
-		fRef = 8D15AC360486D014006FF6A4 /* MarkEdit-Info.plist */;
-		fallbackIsa = PBXBookmark;
-		isK = 0;
-		kPath = (
-		);
-		name = "/Users/bodhi/Code/cocoa/MarkEdit/MarkEdit-Info.plist";
-		rLen = 0;
-		rLoc = 9223372036854775808;
-	};
-	CF4278E9116E1C120030C2BA /* PlistBookmark */ = {
-		isa = PlistBookmark;
-		fRef = 8D15AC360486D014006FF6A4 /* MarkEdit-Info.plist */;
-		fallbackIsa = PBXBookmark;
-		isK = 0;
-		kPath = (
-			LSMinimumSystemVersion,
-		);
-		name = "/Users/bodhi/Code/cocoa/MarkEdit/MarkEdit-Info.plist";
-		rLen = 0;
-		rLoc = 9223372036854775808;
-	};
-	CF6CFACE116E1C3E0088ACCC /* PlistBookmark */ = {
-		isa = PlistBookmark;
-		fRef = 8D15AC360486D014006FF6A4 /* MarkEdit-Info.plist */;
-		fallbackIsa = PBXBookmark;
-		isK = 0;
-		kPath = (
-			LSMinimumSystemVersion,
-		);
-		name = "/Users/bodhi/Code/cocoa/MarkEdit/MarkEdit-Info.plist";
-		rLen = 0;
-		rLoc = 0;
-	};
 	CF6CFAD6116E1C970088ACCC /* PlistBookmark */ = {
 		isa = PlistBookmark;
 		fRef = 8D15AC360486D014006FF6A4 /* MarkEdit-Info.plist */;
@@ -367,55 +324,6 @@
 		);
 		name = "/Users/bodhi/Code/cocoa/MarkEdit/MarkEdit-Info.plist";
 		rLen = 0;
-		rLoc = 9223372036854775807;
-	};
-	CF6CFAD7116E1C970088ACCC /* XCBuildMessageTextBookmark */ = {
-		isa = PBXTextBookmark;
-		comments = "Unused variable 'lineHeight'";
-		fRef = CF426650116380530030C2BA /* MarkdownDelegate.m */;
-		fallbackIsa = XCBuildMessageTextBookmark;
-		rLen = 1;
-		rLoc = 122;
-		rType = 1;
-	};
-	CF6CFAD8116E1C970088ACCC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = CF426650116380530030C2BA /* MarkdownDelegate.m */;
-		name = "MarkdownDelegate.m: 123";
-		rLen = 0;
-		rLoc = 3908;
-		rType = 0;
-		vrLen = 941;
-		vrLoc = 3412;
-	};
-	CF6CFB05116E1DCF0088ACCC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = CF426650116380530030C2BA /* MarkdownDelegate.m */;
-		name = "MarkdownDelegate.m: 123";
-		rLen = 0;
-		rLoc = 3908;
-		rType = 0;
-		vrLen = 941;
-		vrLoc = 3412;
-	};
-	CF6CFB0A116E1DD90088ACCC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = CF426650116380530030C2BA /* MarkdownDelegate.m */;
-		name = "MarkdownDelegate.m: 860";
-		rLen = 0;
-		rLoc = 32945;
-		rType = 0;
-		vrLen = 874;
-		vrLoc = 3412;
-	};
-	CF6CFB14116E21E10088ACCC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = CF426650116380530030C2BA /* MarkdownDelegate.m */;
-		name = "MarkdownDelegate.m: 860";
-		rLen = 0;
-		rLoc = 32945;
-		rType = 0;
-		vrLen = 874;
-		vrLoc = 3412;
+		rLoc = 9223372036854775808;
 	};
 }

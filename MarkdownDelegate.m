@@ -76,12 +76,12 @@ static NSString *setexMarkerType = @"setexMarker";
 //  [ps setTailIndent:-28];
   blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 //					  ps, NSParagraphStyleAttributeName,
-						[NSFont fontWithName:@"Georgia-Italic" size:14], NSFontAttributeName,
+						[NSFont fontWithName:@"Times-Italic" size:16], NSFontAttributeName,
 					nil
       ] retain];
 
   NSColor *grey = [NSColor lightGrayColor];
-  NSFont *normal = [NSFont userFontOfSize:14];
+  NSFont *normal = [NSFont fontWithName:@"Times" size:16]; //[NSFont userFontOfSize:14];
 
   metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				    grey, NSForegroundColorAttributeName,
@@ -377,11 +377,12 @@ static NSString *setexMarkerType = @"setexMarker";
 
 - (int)fontSizeOfString:(NSAttributedString *)string atIndex:(int)index {
   NSFont *font = [self fontOfString:string atIndex:index];
-  return (font != nil) ? [font pointSize] : 14;
+  return (font != nil) ? [font pointSize] : 16;
 }
 
 - (NSFont *)codeFontForSize:(int)size {
-  return [NSFont userFixedPitchFontOfSize:size];
+  return [NSFont fontWithName:@"Inconsolata" size:16]; //[NSFont userFontOfSize:14];
+//  return [NSFont userFixedPitchFontOfSize:size-3];
 }
 
 - (NSFont *)emphasisedFont:(NSFont *)font {
@@ -410,11 +411,27 @@ static NSString *setexMarkerType = @"setexMarker";
   NSFontManager *fontManager = [NSFontManager sharedFontManager];
 
   level = level < 6 ? level : 6;
-  int size = 24 - ((level-1)/2) * 4;
-
+  int size;
+  switch (level) {
+    case 1:
+      size = 24;
+      break;
+    case 2:
+      size = 21;
+      break;
+    case 3:
+    case 4:
+      size = 18;
+      break;
+    case 5:
+    case 6:
+      size = 16;
+      break;    
+  }
+  
   font = [fontManager convertFont:font toSize:size];
-
-  if (level % 2 == 1)
+  
+  if (level != 1 && level % 2 == 1)
     font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
 
   return font;
@@ -592,7 +609,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	[line addAttributes:codeAttributes range:range];
 	//	NSLog(@"Not marking code tooltip");
 	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
-	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:12] range:content];
+	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:16] range:content];
       } else if (block.type == headerType) {
 	NSDictionary *attributes = h1Attributes;
 	NSRange suffix = NSMakeRange(NSNotFound, 0);
