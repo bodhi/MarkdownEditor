@@ -208,7 +208,7 @@
 				CF6CFAF8116E1D990088ACCC /* OgreFindPanelTest.app */,
 				CF6CFAFA116E1D990088ACCC /* MyFindPanelExample.app */,
 				CF6CFAFC116E1D990088ACCC /* ReplaceWithAttributesTest.app */,
-				CF6CFAFE116E1D990088ACCC /* GC Test.app */,
+				CF6CFAFE116E1D990088ACCC /* GCTest.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -301,10 +301,10 @@
 			remoteRef = CF6CFAFB116E1D990088ACCC /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		CF6CFAFE116E1D990088ACCC /* GC Test.app */ = {
+		CF6CFAFE116E1D990088ACCC /* GCTest.app */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.application;
-			path = "GC Test.app";
+			path = GCTest.app;
 			remoteRef = CF6CFAFD116E1D990088ACCC /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
