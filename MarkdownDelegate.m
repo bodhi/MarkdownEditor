@@ -426,11 +426,11 @@ static NSString *setexMarkerType = @"setexMarker";
     case 5:
     case 6:
       size = 16;
-      break;    
+      break;
   }
-  
+
   font = [fontManager convertFont:font toSize:size];
-  
+
   if (level != 1 && level % 2 == 1)
     font = [fontManager convertFont:font toHaveTrait:NSFontBoldTrait];
 
@@ -514,7 +514,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     suffix.location -= 1;	// ']' before url+title
     suffix.length += 1;
-    
+
     [self markAsMeta:string range:NSMakeRange(mRange.location, 1)]; // leading [
     [self markAsMeta:string range:suffix];
     if (url != nil) {
@@ -742,6 +742,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     indent = 0;
 
+    NSRange paraIndent = [self indentForString:string range:lineRange stack:stack];
+
     if ([blank matchInAttributedString:string range:lineRange] != nil) {
       [self popParagraphBlocks:stack];
       newPara = true;
@@ -750,7 +752,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     } else if (newPara) {
       newPara = false;
 
-      NSRange paraIndent = [self indentForString:string range:lineRange stack:stack];
       if (paraIndent.length > 0) {
 	[self popIndentedBlocks:stack indent:paraIndent.length];
 	[self markAsMeta:string range:paraIndent];
@@ -765,7 +766,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	stack = [NSMutableArray array];
       }
 
-    } else if (!newPara && (match = [setex matchInAttributedString:string range:lineRange])) { // SETEX header
+    } else if (match = [setex matchInAttributedString:string range:lineRange]) { // SETEX header
       prevStack = [NSMutableArray array];
       [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
       [self markLine:string range:prevRange stack:prevStack];
@@ -778,6 +779,20 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       continue;
     } else {
       [self markLine:string range:prevRange stack:prevStack];
+
+      if (paraIndent.length > 0) {
+        [self popIndentedBlocks:stack indent:paraIndent.length];
+        [self markAsMeta:string range:paraIndent];
+
+        match = [indented matchInAttributedString:string range:lineRange];
+        if (match) {
+          NSRange mRange = [match rangeOfMatchedString];
+          lineRange.location += mRange.length;
+          lineRange.length -= mRange.length;
+        }
+      } else {
+        // Indent wrapped paragraph
+      }
     }
 
 
@@ -785,11 +800,11 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     // one matches, push that type on this line's stack of types,
     // adn replace the rest of the types to check with the types that
     // can nest inside the original matched type.
-    // 
+    //
     // E.g. default is `(quote, list, header)` matching against "* #
     // The header" quote doesn't match, remove it from list and move
     // on.
-    // 
+    //
     // List matches, so replace the rest of the types to check
     // (currently just `(header)`) with the types that can nest in a
     // list item `(header, list)`, and adjust the range of the string
@@ -832,7 +847,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       new = [block copy];
       [prevStack addObject:new];
 //      block.indent += block.prefixLength;
-      block.prefixLength = 0;
+      block.prefixLength = 0; // Set to 0 to avoid marking wrapped lines with the meta markup
     }
 
   }
