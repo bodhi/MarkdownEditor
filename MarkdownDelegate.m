@@ -354,21 +354,23 @@ static NSString *setexMarkerType = @"setexMarker";
   int pointIndent = 16 + level * 16;
 
   [ps setHeadIndent:pointIndent];
-  [ps setFirstLineHeadIndent:pointIndent - pixels * level];
+  [ps setFirstLineHeadIndent:pointIndent - pixels];
 //  [ps setTailIndent:-pointIndent];
   return [NSDictionary dictionaryWithObject: ps forKey:NSParagraphStyleAttributeName];
 }
 
 - (void)indent:(NSMutableAttributedString *)string range:(NSRange) range for:(NSArray *)stack {
   int level = 0;
+  int prefixTotal = 0;
   for (MDBlock *block in stack) {
     if (block.type == listType ||
 	block.type == quoteType) {
       level += 1;
+      prefixTotal += block.prefixLength;
     }
   }
 
-  if (level > 0) [string addAttributes:[self attributesForIndentTo:level leadOffset:16] range:range];
+  if (level > 0) [string addAttributes:[self attributesForIndentTo:level leadOffset:8 * prefixTotal] range:range];
 }
 
 - (NSFont *)fontOfString:(NSAttributedString *)string atIndex:(int)index {
@@ -464,16 +466,22 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (void) popLineBlocks:(NSMutableArray *)stack {
-
   [self popBlocks:stack checkFn:^(MDBlock *block) {
       return (bool) [lineBlocks containsObject:block.type];
     }];
+  for (MDBlock *block in stack)
+    block.prefixLength = 0;
 }
 
 - (void) popIndentedBlocks:(NSMutableArray *)stack indent:(int)indent {
-  [self popBlocks:stack checkFn:^(MDBlock *block) {
-      return (bool) (block.type != listType || block.indent + block.prefixLength > indent);
-    }];
+  while ([stack count] > 1) { // Only indent 1 level
+    [stack removeLastObject];
+  }
+  if ([stack count] == 1 && [[stack objectAtIndex:0] type] == listType && indent >= 2) { // Indent 2
+    [[stack objectAtIndex:0] setPrefixLength:2];
+  } else {
+    [stack removeLastObject];
+  }
 }
 
 - (void) popParagraphBlocks:(NSMutableArray *)stack {
@@ -589,13 +597,15 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     [self indent:line range:range for:localStack];
 
+    int prefixLength = 0;
     while ([localStack count] > 0) {
       MDBlock *block = [localStack objectAtIndex:0];
       [localStack removeObjectAtIndex:0];
 
-      prefix = NSMakeRange(range.location + block.indent, block.prefixLength);
-      if (prefix.length > range.length - block.indent) prefix.length = range.length - block.indent;
+      prefix = NSMakeRange(range.location + prefixLength, block.prefixLength);
+      if (prefix.length > range.length) prefix.length = range.length;
       content = NSMakeRange(prefix.location + prefix.length, 0);
+      prefixLength += block.prefixLength;
 
       if (range.location + range.length > content.location)
 	content.length = range.location + range.length - content.location;
@@ -714,6 +724,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   NSRange edited = [storage editedRange];
   edited = [self expandRangeToParagraph:edited forString:string];
   stringRange = edited;
+
+//  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
 
   [string beginEditing];
 
@@ -846,8 +858,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     for (MDBlock *block in stack) {
       new = [block copy];
       [prevStack addObject:new];
-//      block.indent += block.prefixLength;
-      block.prefixLength = 0; // Set to 0 to avoid marking wrapped lines with the meta markup
+      if (block.type != listType) block.indent += block.prefixLength;
     }
 
   }
