@@ -618,7 +618,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       if (block.type == codeType) {
 	[line addAttributes:codeAttributes range:range];
 	//	NSLog(@"Not marking code tooltip");
-	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
+//	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
 	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:16] range:content];
       } else if (block.type == headerType) {
 	NSDictionary *attributes = h1Attributes;
@@ -705,8 +705,16 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   next = [self range:next constrainedTo:string];
 
   prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
+  if (prev.location != NSNotFound) {
+    prev.location -= 1;
+    prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
+  }
   next = [haystack rangeOfString:needle options:0 range:next];
-
+  if (next.location != NSNotFound) {
+    next.location += 1;
+    next = [haystack rangeOfString:needle options:0 range:next];
+  }
+  
   // Add one to get to the middle of \n\n, ie. the start of the blank
   // line, not the end of the previous paragraph
   range.location = prev.location == NSNotFound ? 0 : prev.location + 1;
