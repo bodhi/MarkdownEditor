@@ -229,8 +229,8 @@ static NSString *emptyType = @"empty";
 
   bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
 
-  mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
-  lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, setexType, nil];
+  mainOrder = [[NSArray alloc] initWithObjects:hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
+  lineBlocks = [[NSArray alloc] initWithObjects:hrType, refType, headerType, setexType, nil];
 }
 
 - (int)attachImage:(NSURL *)url toString:(NSMutableAttributedString *)target atIndex:(int) index {
@@ -836,6 +836,19 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   return prev;
 }
 
+- (NSMutableArray *)previousListStack:(NSArray *)data before:(int)i {
+  NSString *iType;
+  NSMutableArray *stack;
+  do {
+    i--; // find previous non-blank parse-line
+    stack = [data objectAtIndex:i];
+    iType = [[stack objectAtIndex:0] type];
+    NSLog(@"at %d type %@", i, iType);
+    if (iType == listType) return [NSArray arrayWithObject:[stack objectAtIndex:0]];
+  } while (i > 0 && (iType == emptyType || iType == plainType));
+  return nil;
+}
+
 - (void)markupRegion:(NSRange) stringRange in:(NSMutableAttributedString *)string withData:(NSArray *)data {
   NSMutableArray *stack;
   
@@ -853,10 +866,12 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
         NSMutableArray *newStack = [self previousContentStack:data before:index];
         if (newStack != nil) stack = newStack;
       } else if ([stack count] > 0 && [[stack objectAtIndex:0] type] == indentType) {
-        NSMutableArray *newStack = [self previousContentStack:data before:index];
+        NSMutableArray *newStack = [self previousListStack:data before:index];
         if (newStack != nil) {
           [self popParagraphBlocks:newStack];
           stack = newStack;
+        } else if ([[stack objectAtIndex:0] prefixLength] >= 4) {
+          stack = [NSArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:lineMatch]];
         }
       }
 
