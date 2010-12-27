@@ -715,12 +715,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
   prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
   if (prev.location != NSNotFound) {
-    prev.location -= 1;
+    prev.length = prev.location;
+    prev.location = 0;
     prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
   }
   next = [haystack rangeOfString:needle options:0 range:next];
   if (next.location != NSNotFound) {
     next.location += 1;
+    next.length = [haystack length] - next.location;
     next = [haystack rangeOfString:needle options:0 range:next];
   }
   
