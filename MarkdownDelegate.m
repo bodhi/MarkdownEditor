@@ -823,11 +823,13 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (NSMutableArray *)previousContentStack:(NSArray *)data before:(int)i {
-  i -= 1;                   // *before* index
   NSMutableArray *prev = nil;
-  while (i >= 0 && 
-         [[data objectAtIndex:i] count])
+  NSString *iType;
+  do {
     i--; // find previous non-blank parse-line
+    iType = [[[data objectAtIndex:i] objectAtIndex:0] type];
+    NSLog(@"at %d type %@", i, iType);
+  } while (i > 0 && iType == plainType);
   if (i >= 0) {
     prev = [self bareStack:[data objectAtIndex:i]];
   }
@@ -844,18 +846,22 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     NSRange range = [lineMatch rangeOfMatchedString];
     if (index < [data count]) {
       stack = [data objectAtIndex:index];
-      if (index > 0 && [stack count] == 0) { // Could be lazily continued paragraph, indent according to previous stack
+
+      NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
+
+      if (index > 0 && [[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
         NSMutableArray *newStack = [self previousContentStack:data before:index];
-        if (newStack != nil) [self markLine:string range:range stack:newStack];
+        if (newStack != nil) stack = newStack;
       } else if ([stack count] > 0 && [[stack objectAtIndex:0] type] == indentType) {
         NSMutableArray *newStack = [self previousContentStack:data before:index];
         if (newStack != nil) {
           [self popParagraphBlocks:newStack];
-          [self markLine:string range:range stack:newStack];
+          stack = newStack;
         }
-      } else {
-        [self markLine:string range:range stack:stack];
       }
+
+      NSLog(@"rendering as %@\n----------", stack);
+      [self markLine:string range:range stack:stack];
       index += 1;
     } else {
       NSLog(@"trying to markup line with index %d when stack only has %d entries", index, [data count]);
