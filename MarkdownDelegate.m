@@ -215,7 +215,7 @@ static NSString *emptyType = @"empty";
 											   @"^(?=.)"],
 						    nil], plainType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^\\s+(?=[^\\t >#*\\d-=\\[])"],
+											   @"^[^\n\\S]+"],
 						    nil], indentType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^$"],
