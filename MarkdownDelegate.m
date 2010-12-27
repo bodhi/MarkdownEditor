@@ -172,7 +172,7 @@ static NSString *emptyType = @"empty";
   (?<delimchar>[*_`])  \
   \\k<delimchar>?      \
 )                      \
-(?<content>.+?)        \
+(?<content>\\S.+?\\S|\\S+?) \
 (?<end_delimiter>      \
   (?<!\\\\)            \
   \\k<delimiter>       \
@@ -231,7 +231,7 @@ static NSString *emptyType = @"empty";
   // @indented = /^\s+(?=\S)/
   indented = [[OGRegularExpression alloc] initWithString:@"^\\s+(?=\\S)"];
 
-  bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
+  bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[a-zA-Z][a-zA-Z0-9+.-]*:[^>]+)>"];
 
   mainOrder = [[NSArray alloc] initWithObjects:setexMarkerType, hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:hrType, refType, headerType, setexType, nil];
@@ -851,13 +851,15 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       if ([[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
         NSMutableArray *newStack = [self previousContentStack:data before:index];
         if (newStack != nil) stack = newStack;
-      } else if ([stack count] > 0 && [[stack objectAtIndex:0] type] == indentType) {
+      } else if ([[stack objectAtIndex:0] type] == indentType) {
         NSMutableArray *newStack = [self previousListStack:data before:index];
         if (newStack != nil) {
           [self popParagraphBlocks:newStack];
           stack = newStack;
         } else if ([[stack objectAtIndex:0] prefixLength] >= 4) {
           stack = [NSArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:lineMatch]];
+        } else if ((newStack = [self previousContentStack:data before:index]) != nil) {
+          stack = newStack;
         }
       }
       NSLog(@"rendering as %@\n----------", stack);
