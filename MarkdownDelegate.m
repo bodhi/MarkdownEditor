@@ -714,15 +714,15 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   next = [self range:next constrainedTo:string];
 
   prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
-//  if (prev.location != NSNotFound) {
-//    prev.location -= 1;
-//    prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
-//  }
+  if (prev.location != NSNotFound) {
+    prev.location -= 1;
+    prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
+  }
   next = [haystack rangeOfString:needle options:0 range:next];
-//  if (next.location != NSNotFound) {
-//    next.location += 1;
-//    next = [haystack rangeOfString:needle options:0 range:next];
-//  }
+  if (next.location != NSNotFound) {
+    next.location += 1;
+    next = [haystack rangeOfString:needle options:0 range:next];
+  }
   
   // Add one to get to the middle of \n\n, ie. the start of the blank
   // line, not the end of the previous paragraph
@@ -806,13 +806,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       }
     }
                                                                                                
-                                                                                                   NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
+    NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
     prevStack = stack;
     stack = [NSMutableArray array];
     [data addObject:stack];
 
   }
 
+  [data removeLastObject];
   return data;
 }
 
@@ -831,28 +832,27 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 - (NSMutableArray *)previousContentStack:(NSArray *)data before:(int)i {
   NSMutableArray *prev = nil;
-  NSString *iType;
-  do {
+  i -= 1;
+  while (i >= 0) {
+    prev = [data objectAtIndex:i];
+    NSLog(@"at %d type %@", i, [[prev objectAtIndex:0] type]);
+    if ([[prev objectAtIndex:0] type] != plainType) return [self bareStack:prev];
     i--; // find previous non-blank parse-line
-    iType = [[[data objectAtIndex:i] objectAtIndex:0] type];
-    NSLog(@"at %d type %@", i, iType);
-  } while (i > 0 && iType == plainType);
-  if (i >= 0) {
-    prev = [self bareStack:[data objectAtIndex:i]];
   }
-  return prev;
+  return nil;
 }
 
 - (NSMutableArray *)previousListStack:(NSArray *)data before:(int)i {
   NSString *iType;
   NSMutableArray *stack;
-  do {
-    i--; // find previous non-blank parse-line
+  while (i > 0) {
+    i--;
     stack = [data objectAtIndex:i];
     iType = [[stack objectAtIndex:0] type];
     NSLog(@"at %d type %@", i, iType);
     if (iType == listType) return [NSArray arrayWithObject:[stack objectAtIndex:0]];
-  } while (i > 0 && (iType == emptyType || iType == plainType));
+    else if (iType != emptyType && iType != plainType) return nil;
+  }
   return nil;
 }
 
