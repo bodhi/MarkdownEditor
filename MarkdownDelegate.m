@@ -18,6 +18,8 @@ static NSString *hrType = @"hr";
 static NSString *plainType = @"plain";
 static NSString *setexType = @"setex";
 static NSString *setexMarkerType = @"setexMarker";
+static NSString *indentType = @"indent";
+static NSString *emptyType = @"empty";
 
 @interface MDBlock : NSObject <NSCopying> {
   NSString *type;
@@ -54,7 +56,7 @@ static NSString *setexMarkerType = @"setexMarker";
 }
 
 - (NSString *)description {
-  return [NSString stringWithFormat:@"%@:%d:%d", type, indent, prefixLength];
+  return [NSString stringWithFormat:@"%@ indent:%d prefix:%d", type, indent, prefixLength];
 }
 @end
 
@@ -211,20 +213,20 @@ static NSString *setexMarkerType = @"setexMarker";
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(?=[^\\t >#*\\d-=\\[])"],
 						    nil], plainType,
+					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+											   @"^$"],
+						    nil], emptyType,
 				       nil];
 
   // setex = /^([-=])\1*\s*$/
   setex = [[OGRegularExpression alloc] initWithString:@"^([-=])\\1*\\s*$"];
-
-  // blank = /^\s*$/
-  blank = [[OGRegularExpression alloc] initWithString:@"^\\s*$"];
 
   // @indented = /^\s+(?=\S)/
   indented = [[OGRegularExpression alloc] initWithString:@"^\\s+(?=\\S)"];
 
   bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
 
-  mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, nil];
+  mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, emptyType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, setexType, nil];
 }
 
@@ -485,7 +487,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (void) popParagraphBlocks:(NSMutableArray *)stack {
-  MDBlock *first;
+  MDBlock *first = 0;
   if ([stack count] > 0) first = [stack objectAtIndex:0];
   if (first == nil || first.type == listType)
     return;
@@ -705,15 +707,15 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   next = [self range:next constrainedTo:string];
 
   prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
-  if (prev.location != NSNotFound) {
-    prev.location -= 1;
-    prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
-  }
+//  if (prev.location != NSNotFound) {
+//    prev.location -= 1;
+//    prev = [haystack rangeOfString:needle options:NSBackwardsSearch range:prev];
+//  }
   next = [haystack rangeOfString:needle options:0 range:next];
-  if (next.location != NSNotFound) {
-    next.location += 1;
-    next = [haystack rangeOfString:needle options:0 range:next];
-  }
+//  if (next.location != NSNotFound) {
+//    next.location += 1;
+//    next = [haystack rangeOfString:needle options:0 range:next];
+//  }
   
   // Add one to get to the middle of \n\n, ie. the start of the blank
   // line, not the end of the previous paragraph
@@ -723,99 +725,52 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   return range;
 }
 
-- (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
-  NSTextStorage *storage = [aNotification object];
-  NSMutableAttributedString *string;
-  string = storage;
-  NSRange stringRange = NSMakeRange(0, [string length]);
-
-  NSRange edited = [storage editedRange];
-  edited = [self expandRangeToParagraph:edited forString:string];
-  stringRange = edited;
-
-//  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
-
-  [string beginEditing];
-
-  [string removeAttribute:NSParagraphStyleAttributeName range:stringRange];
-  [string removeAttribute:NSFontAttributeName range:stringRange];
-  [string removeAttribute:NSForegroundColorAttributeName range:stringRange];
-  [string removeAttribute:NSBackgroundColorAttributeName range:stringRange];
-  [string removeAttribute:NSKernAttributeName range:stringRange];
-  [string removeAttribute:NSToolTipAttributeName range:stringRange];
-  [string removeAttribute:MarkdownCodeSection range:stringRange];
-  [string removeAttribute:NSLinkAttributeName range:stringRange];
-  [string addAttributes:defaultAttributes range:stringRange];
-
-  NSMutableArray *stack, *prevStack;
+- (NSArray *)parseRegion:(NSRange)stringRange in:(NSMutableAttributedString *)string {
+  NSMutableArray *stack = 0, *prevStack = 0, *data = 0;
   NSRange prevRange = NSMakeRange(NSNotFound, 0);
-  bool newPara = true;
+
+  data = [NSMutableArray array];
+    stack = [NSMutableArray array];
+  [data addObject:stack];
+
   int indent = 0;
-  stack = [NSMutableArray array];
 
   for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
     NSRange lRange = [lineMatch rangeOfMatchedString];
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
     OGRegularExpressionMatch *match;
-
-    [self popLineBlocks:stack];
-
-    indent = 0;
-
-    NSRange paraIndent = [self indentForString:string range:lineRange stack:stack];
-
-    if ([blank matchInAttributedString:string range:lineRange] != nil) {
-      [self popParagraphBlocks:stack];
-      newPara = true;
-      [self markLine:string range:prevRange stack:prevStack];
-      continue;
-    } else if (newPara) {
-      newPara = false;
-
-      if (paraIndent.length > 0) {
-	[self popIndentedBlocks:stack indent:paraIndent.length];
-	[self markAsMeta:string range:paraIndent];
-
-	match = [indented matchInAttributedString:string range:lineRange];
-	if (match) {
-	  NSRange mRange = [match rangeOfMatchedString];
-	  lineRange.location += mRange.length;
-	  lineRange.length -= mRange.length;
-	}
-      } else {
-	stack = [NSMutableArray array];
-      }
-
-    } else if (match = [setex matchInAttributedString:string range:lineRange]) { // SETEX header
-      prevStack = [NSMutableArray array];
+    
+/*    if ((prevStack != nil) && [prevStack count] == 0 &&  (match = [setex matchInAttributedString:string range:lineRange])) { // SETEX header
+      [prevStack removeAllObjects];
       [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
-      [self markLine:string range:prevRange stack:prevStack];
 
-      prevStack = [NSMutableArray array];
       NSRange mRange = [match rangeOfMatchedString];
       [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexMarkerType indent:0 prefix:mRange.length match:match]];
       prevRange = lineRange;	     // whole line, not subsection
 
       continue;
+    }
+*/  
+    NSRange mRange = NSMakeRange(0,0);
+    match = [indented matchInAttributedString:string range:lineRange];
+    if (match) mRange = [match rangeOfMatchedString];
+    
+    NSLog(@"Looking indented %d at |%@|", mRange.length, [[string attributedSubstringFromRange:lRange] string]);
+    
+    if (mRange.length > 0) {
+      
+      [stack addObject:[MDBlock blockWithType:indentType indent:mRange.length prefix:0 match:match]];
+
+//        lineRange.location += mRange.length;
+//        lineRange.length -= mRange.length;
+//      [self popParagraphBlocks:stack];
     } else {
-      [self markLine:string range:prevRange stack:prevStack];
-
-      if (paraIndent.length > 0) {
-        [self popIndentedBlocks:stack indent:paraIndent.length];
-        [self markAsMeta:string range:paraIndent];
-
-        match = [indented matchInAttributedString:string range:lineRange];
-        if (match) {
-          NSRange mRange = [match rangeOfMatchedString];
-          lineRange.location += mRange.length;
-          lineRange.length -= mRange.length;
-        }
-      } else {
-        // Indent wrapped paragraph
-      }
+      // Indent wrapped paragraph
     }
 
+    NSLog(@"Pre-parsing stack: %@", stack);
 
+    indent = 0;
     // Start with the default set of types to check (mainOrder).  If
     // one matches, push that type on this line's stack of types,
     // adn replace the rest of the types to check with the types that
@@ -858,31 +813,106 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	lineRange = NSMakeRange(lineRange.location + mRange.length, lineRange.length - mRange.length);
       }
     }
-
-    // Remember this line so that it's marked properly next time around
-    prevRange = lRange;
-    prevStack = [NSMutableArray array];
-    MDBlock *new;
-    for (MDBlock *block in stack) {
-      new = [block copy];
-      [prevStack addObject:new];
-      if (block.type != listType) block.indent += block.prefixLength;
-    }
+                                                                                               
+    NSLog(@"Final stack: %@", stack);
+    prevStack = stack;
+    stack = [NSMutableArray array];
+    [data addObject:stack];
 
   }
 
-  // Since each line is marked when it's succeeding line is parsed, we
-  // need to mark the last line of the document (which *doesn't have*
-  // a succeeding line!)
-  if (prevRange.length > 0 && prevStack != nil)
-    [self markLine:string range:prevRange stack:prevStack];
+  return data;
+}
+
+- (NSMutableArray *)bareStack:(NSArray *)stack {
+  NSMutableArray *newStack = [NSMutableArray array];
+  MDBlock *dup;
+  for(MDBlock *block in stack) {
+    dup = [block copy];
+    dup.prefixLength = 0;
+    dup.indent = 0;
+    [newStack addObject:dup];
+  }
+  [self popLineBlocks:newStack];
+  return newStack;
+}
+
+- (NSMutableArray *)previousContentStack:(NSArray *)data before:(int)i {
+  i -= 1;                   // *before* index
+  NSMutableArray *prev = nil;
+  while (i >= 0 && 
+         [[data objectAtIndex:i] count] == 0)
+    i--; // find previous non-blank parse-line
+  if (i >= 0) {
+    prev = [self bareStack:[data objectAtIndex:i]];
+  }
+  return prev;
+}
+
+- (void)markupRegion:(NSRange) stringRange in:(NSMutableAttributedString *)string withData:(NSArray *)data {
+  NSMutableArray *stack;
+  
+  int index = 0;
+
+  for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
+
+    NSRange range = [lineMatch rangeOfMatchedString];
+    if (index < [data count]) {
+      stack = [data objectAtIndex:index];
+      if (index > 0 && [stack count] == 0) { // Could be lazily continued paragraph, indent according to previous stack
+        NSMutableArray *newStack = [self previousContentStack:data before:index];
+        if (newStack != nil) [self markLine:string range:range stack:newStack];
+      } else if ([stack count] > 0 && [[stack objectAtIndex:0] type] == indentType) {
+        NSMutableArray *newStack = [self previousContentStack:data before:index];
+        if (newStack != nil) {
+          [self popParagraphBlocks:newStack];
+          [self markLine:string range:range stack:newStack];
+        }
+      } else {
+        [self markLine:string range:range stack:stack];
+      }
+      index += 1;
+    } else {
+      NSLog(@"trying to markup line with index %d when stack only has %d entries", index, [data count]);
+    }
+
+  }
 
   if (newReferences) {
     [self markLinks:string range:NSMakeRange(0, [string length])];
     [self markImages:string range:NSMakeRange(0, [string length])];
     newReferences = false;
   }
+}
 
+- (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
+  NSTextStorage *storage = [aNotification object];
+  NSMutableAttributedString *string;
+  string = storage;
+  NSRange stringRange = NSMakeRange(0, [string length]);
+
+  NSRange edited = [storage editedRange];
+  edited = [self expandRangeToParagraph:edited forString:string];
+  stringRange = edited;
+
+  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
+
+  [string beginEditing];
+
+  [string removeAttribute:NSParagraphStyleAttributeName range:stringRange];
+  [string removeAttribute:NSFontAttributeName range:stringRange];
+  [string removeAttribute:NSForegroundColorAttributeName range:stringRange];
+  [string removeAttribute:NSBackgroundColorAttributeName range:stringRange];
+  [string removeAttribute:NSKernAttributeName range:stringRange];
+  [string removeAttribute:NSToolTipAttributeName range:stringRange];
+  [string removeAttribute:MarkdownCodeSection range:stringRange];
+  [string removeAttribute:NSLinkAttributeName range:stringRange];
+  [string addAttributes:defaultAttributes range:stringRange];
+
+  NSArray *parse = [self parseRegion:stringRange in:string];
+  NSLog(@"Parsed to %@\n", parse);
+  [self markupRegion:stringRange in:string withData:parse];
+  
   [string fixAttributesInRange:stringRange];
   [storage endEditing];
 }
