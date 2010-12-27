@@ -191,6 +191,8 @@ static NSString *emptyType = @"empty";
 				nil
       ] retain];
 
+  hrRegexp = [OGRegularExpression regularExpressionWithString:@"^([\\t ]{,3}([-*])(?:[\\t ]*\\2){2,}[\\t ]*)$"];
+
   blocks = [[NSDictionary alloc] initWithObjectsAndKeys:
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
@@ -207,11 +209,10 @@ static NSString *emptyType = @"empty";
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^ {4}"],
 						    nil], codeType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^([\\t ]{,3}([-*])(?:[\\t ]*\\2){2,}[\\t ]*)$"],
+					  [NSArray arrayWithObjects:hrRegexp,
 						    nil], hrType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(?=[^\\t >#*\\d-=\\[])"],
+											   @"^(?=.)"],
 						    nil], plainType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^\\s+(?=[^\\t >#*\\d-=\\[])"],
@@ -219,6 +220,9 @@ static NSString *emptyType = @"empty";
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^$"],
 						    nil], emptyType,
+					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+											   @"^([-=])\\1*\\s*$"],
+						    nil], setexMarkerType,
 				       nil];
 
   // setex = /^([-=])\1*\s*$/
@@ -229,7 +233,7 @@ static NSString *emptyType = @"empty";
 
   bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
 
-  mainOrder = [[NSArray alloc] initWithObjects:hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
+  mainOrder = [[NSArray alloc] initWithObjects:setexMarkerType, hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:hrType, refType, headerType, setexType, nil];
 }
 
@@ -743,18 +747,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
     OGRegularExpressionMatch *match;
     
-/*    if ((prevStack != nil) && [prevStack count] == 0 &&  (match = [setex matchInAttributedString:string range:lineRange])) { // SETEX header
-      [prevStack removeAllObjects];
-      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
-
-      NSRange mRange = [match rangeOfMatchedString];
-      [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexMarkerType indent:0 prefix:mRange.length match:match]];
-      prevRange = lineRange;	     // whole line, not subsection
-
-      continue;
-    }
-*/  
-
     indent = 0;
     // Start with the default set of types to check (mainOrder).  If
     // one matches, push that type on this line's stack of types,
@@ -798,8 +790,23 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	lineRange = NSMakeRange(lineRange.location + mRange.length, lineRange.length - mRange.length);
       }
     }
+
+    if ([[stack objectAtIndex:0] type] == setexMarkerType) {
+      NSLog(@"Setex marker of %@", [[[stack objectAtIndex:0] match] substringAtIndex:1]);
+      NSLog(@"PrevStack %@", prevStack);
+  
+      if ((prevStack != nil && [[prevStack objectAtIndex:0] type] != emptyType) || [[[[stack objectAtIndex:0] match] substringAtIndex:1] isEqualToString:@"="]) {
+        [prevStack removeAllObjects];
+        [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
+        [[stack objectAtIndex:0] setPrefixLength:lRange.length];
+      } else if ([hrRegexp matchInAttributedString:string range:lRange] != nil) {
+        [stack replaceObjectAtIndex:0 withObject:[MDBlock blockWithType:hrType indent:0 prefix:lRange.length match:match]];
+      } else {
+        [stack replaceObjectAtIndex:0 withObject:[MDBlock blockWithType:plainType indent: 0 prefix:0 match:match]];
+      }
+    }
                                                                                                
-    NSLog(@"Final stack: %@", stack);
+                                                                                                   NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
     prevStack = stack;
     stack = [NSMutableArray array];
     [data addObject:stack];
@@ -857,12 +864,12 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
 
     NSRange range = [lineMatch rangeOfMatchedString];
-    if (index < [data count]) {
+    if (index >= 0 && index < [data count]) {
       stack = [data objectAtIndex:index];
 
       NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
 
-      if (index > 0 && [[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
+      if ([[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
         NSMutableArray *newStack = [self previousContentStack:data before:index];
         if (newStack != nil) stack = newStack;
       } else if ([stack count] > 0 && [[stack objectAtIndex:0] type] == indentType) {
@@ -874,7 +881,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
           stack = [NSArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:lineMatch]];
         }
       }
-
       NSLog(@"rendering as %@\n----------", stack);
       [self markLine:string range:range stack:stack];
       index += 1;
@@ -901,7 +907,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   edited = [self expandRangeToParagraph:edited forString:string];
   stringRange = edited;
 
-  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
+//  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
 
   [string beginEditing];
 
