@@ -482,17 +482,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     block.prefixLength = 0;
 }
 
-- (void) popIndentedBlocks:(NSMutableArray *)stack indent:(int)indent {
-  while ([stack count] > 1) { // Only indent 1 level
-    [stack removeLastObject];
-  }
-  if ([stack count] == 1 && [[stack objectAtIndex:0] type] == listType && indent >= 2) { // Indent 2
-    [[stack objectAtIndex:0] setPrefixLength:2];
-  } else {
-    [stack removeLastObject];
-  }
-}
-
 - (void) popParagraphBlocks:(NSMutableArray *)stack {
   MDBlock *first = 0;
   if ([stack count] > 0) first = [stack objectAtIndex:0];
@@ -679,18 +668,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
     if (content.length > 0) [self markInlineElementsIn:line range:content];
   }
-}
-
-- (NSRange) indentForString:(NSAttributedString *)string range:(NSRange)range stack:(NSArray *)stack {
-  OGRegularExpressionMatch *match;
-  NSRange indent = NSMakeRange(NSNotFound, 0);
-  MDBlock *first = nil;
-  if ([stack count] > 0) first = [stack objectAtIndex:0];
-
-  if (first != nil && first.type == listType && (match = [indented matchInAttributedString:string range:range]) != nil) {
-    indent = [match rangeOfMatchedString];
-  }
-  return indent;
 }
 
 - (NSRange) range:(NSRange) range constrainedTo:(NSAttributedString *)string {
