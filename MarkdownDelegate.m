@@ -214,6 +214,9 @@ static NSString *emptyType = @"empty";
 											   @"^(?=[^\\t >#*\\d-=\\[])"],
 						    nil], plainType,
 					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+											   @"^\\s+(?=[^\\t >#*\\d-=\\[])"],
+						    nil], indentType,
+					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
 											   @"^$"],
 						    nil], emptyType,
 				       nil];
@@ -226,7 +229,7 @@ static NSString *emptyType = @"empty";
 
   bareLink = [[OGRegularExpression alloc] initWithString:@"<(?<url>[^>]+)>"];
 
-  mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, emptyType, nil];
+  mainOrder = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:codeType, hrType, refType, headerType, setexType, nil];
 }
 
@@ -730,7 +733,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   NSRange prevRange = NSMakeRange(NSNotFound, 0);
 
   data = [NSMutableArray array];
-    stack = [NSMutableArray array];
+  stack = [NSMutableArray array];
   [data addObject:stack];
 
   int indent = 0;
@@ -751,24 +754,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       continue;
     }
 */  
-    NSRange mRange = NSMakeRange(0,0);
-    match = [indented matchInAttributedString:string range:lineRange];
-    if (match) mRange = [match rangeOfMatchedString];
-    
-    NSLog(@"Looking indented %d at |%@|", mRange.length, [[string attributedSubstringFromRange:lRange] string]);
-    
-    if (mRange.length > 0) {
-      
-      [stack addObject:[MDBlock blockWithType:indentType indent:mRange.length prefix:0 match:match]];
-
-//        lineRange.location += mRange.length;
-//        lineRange.length -= mRange.length;
-//      [self popParagraphBlocks:stack];
-    } else {
-      // Indent wrapped paragraph
-    }
-
-    NSLog(@"Pre-parsing stack: %@", stack);
 
     indent = 0;
     // Start with the default set of types to check (mainOrder).  If
@@ -841,7 +826,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   i -= 1;                   // *before* index
   NSMutableArray *prev = nil;
   while (i >= 0 && 
-         [[data objectAtIndex:i] count] == 0)
+         [[data objectAtIndex:i] count])
     i--; // find previous non-blank parse-line
   if (i >= 0) {
     prev = [self bareStack:[data objectAtIndex:i]];
