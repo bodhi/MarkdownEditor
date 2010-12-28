@@ -835,6 +835,24 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   return nil;
 }
 
+- (NSMutableArray *)mergeIndentedStack:(NSMutableArray *)right onto:(NSArray *)left {
+  NSMutableArray *new = [NSMutableArray arrayWithArray:left];
+  int prefix = [[right objectAtIndex:0] prefixLength];
+  for (MDBlock *block in left) {
+    if (prefix < 0) break;
+    prefix -= block.prefixLength;
+  }
+  if (prefix <= 0) {
+    [right removeObjectAtIndex:0];
+  } else {
+    [[right objectAtIndex:0] setPrefixLength:prefix];    
+  }
+
+  [new addObjectsFromArray:right];
+
+  return new;
+}
+
 - (void)markupRegion:(NSRange) stringRange in:(NSMutableAttributedString *)string withData:(NSArray *)data {
   NSMutableArray *stack;
   
@@ -855,7 +873,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
         NSMutableArray *newStack = [self previousListStack:data before:index];
         if (newStack != nil) {
           [self popParagraphBlocks:newStack];
-          stack = newStack;
+          stack = [self mergeIndentedStack:stack onto:newStack];
         } else if ([[stack objectAtIndex:0] prefixLength] >= 4) {
           stack = [NSArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:lineMatch]];
         } else if ((newStack = [self previousContentStack:data before:index]) != nil) {
