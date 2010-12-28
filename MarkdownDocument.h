@@ -8,15 +8,16 @@
 
 
 #import <Cocoa/Cocoa.h>
+#import "MarkdownDelegate.h"
 
 @interface MarkdownDocument : NSDocument
 {
   IBOutlet NSTextView *textView;
 
   NSMutableAttributedString *string;
-  NSString *attachmentChar;
+
+  IBOutlet MarkdownDelegate *mdDelegate;
 }
 
 @property(retain) NSMutableAttributedString *string;
-@property(retain) NSString *attachmentChar;
 @end

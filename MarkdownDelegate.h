@@ -7,7 +7,6 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import "MarkdownDocument.h"
 
 @class OGRegularExpression;
 
@@ -29,15 +28,17 @@
 
     OGRegularExpression *inlinePattern, *linkRegex, *image, *setex, *blank, *indented, *bareLink, *hrRegexp;
 
-    IBOutlet MarkdownDocument *document;
-
     NSArray *mainOrder, *lineBlocks;
 
     NSDictionary *blocks;
 
     bool newReferences;
-}
+
+    NSString *attachmentChar;
+    NSURL *baseURL;
+  }
 
 @property (assign) IBOutlet NSTextView *text;
-
+@property (retain) NSString *attachmentChar;
+@property (retain) NSURL *baseURL;
 @end

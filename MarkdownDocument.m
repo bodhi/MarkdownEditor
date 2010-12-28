@@ -11,7 +11,6 @@
 
 @implementation MarkdownDocument
 @synthesize string;
-@synthesize attachmentChar;
 
 - (id)init
 {
@@ -33,13 +32,14 @@
 {
     [super windowControllerDidLoadNib:aController];
     if (self.string != nil) {
-      [[textView textStorage] setAttributedString: self.string];
+      mdDelegate.baseURL = [self fileURL];
+      [[textView textStorage] setAttributedString:self.string];
     }
 }
 
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError
 {
-  OGRegularExpression *regex = [OGRegularExpression regularExpressionWithString:attachmentChar];
+  OGRegularExpression *regex = [OGRegularExpression regularExpressionWithString:mdDelegate.attachmentChar];
   return [[regex replaceAllMatchesInString:[textView string] withString:@""] dataUsingEncoding:NSUTF8StringEncoding];
 
   if ( outError != NULL ) {

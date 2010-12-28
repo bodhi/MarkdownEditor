@@ -62,6 +62,8 @@ static NSString *emptyType = @"empty";
 
 @implementation MarkdownDelegate
 @synthesize text;
+@synthesize attachmentChar;
+@synthesize baseURL;
 
 - (void)awakeFromNib {
   [text textStorage].delegate = self;
@@ -141,8 +143,7 @@ static NSString *emptyType = @"empty";
       ] retain];
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
-  NSString *attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
-  document.attachmentChar = attachmentChar;
+  attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
   [a release];
 
   NSString *urlSuffix = @"\\((\\S+?)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title
@@ -284,7 +285,7 @@ static NSString *emptyType = @"empty";
 
 - (NSURL *)urlForString:(NSString *)urlString orReference:(NSString *)reference {
   urlString = [self urlStringForString:urlString orReference:reference];
-  return (urlString != nil ? [NSURL URLWithString:urlString relativeToURL:[document fileURL]] : nil);
+  return (urlString != nil ? [NSURL URLWithString:urlString relativeToURL:baseURL] : nil);
 }
 
 - (void)textStorageWillProcessEditing:(NSNotification *)aNotification {
@@ -491,6 +492,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   [self popBlocks:stack checkFn:^(MDBlock *block) {
       return (bool) (block.type != listType);
     }];
+
+  
 }
 
 - (void) pushParagraphBlock:(NSMutableArray *)stack block:(MDBlock *)newBlock {
