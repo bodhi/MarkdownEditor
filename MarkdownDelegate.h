@@ -13,13 +13,13 @@
 @interface MarkdownDelegate : NSObject <NSTextStorageDelegate> {
     NSTextView *text;
 
-    NSDictionary *blockquoteAttributes, *metaAttributes, 
+    NSDictionary *blockquoteAttributes, *metaAttributes,
       *codeAttributes, *strongAttributes, *emAttributes,
-      *blankAttributes, *h1Attributes, *h2Attributes,
-      *defaultAttributes, *hrAttributes;
+      *h1Attributes, *h2Attributes, *defaultAttributes,
+      *hrAttributes;
 
     NSMutableDictionary *references;
-    
+
     NSString *MarkdownCodeSection;
 
     OGRegularExpression *imageNoAttachment;
@@ -34,11 +34,18 @@
 
     bool newReferences;
 
+    int baseFontSize;
+
     NSString *attachmentChar;
     NSURL *baseURL;
+
+    NSMutableParagraphStyle *defaultStyle;
   }
 
 @property (assign) IBOutlet NSTextView *text;
 @property (retain) NSString *attachmentChar;
 @property (retain) NSURL *baseURL;
+-(void)makeTextLarger:(NSMutableAttributedString *)string;
+-(void)makeTextSmaller:(NSMutableAttributedString *)string;
+-(void)resetTextSize:(NSMutableAttributedString *)string;
 @end

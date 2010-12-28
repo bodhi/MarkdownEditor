@@ -62,4 +62,16 @@
   }
 }
 
+- (void)makeTextLarger:(id)sender {
+  [mdDelegate makeTextLarger:[textView textStorage]];
+}
+
+- (void)makeTextSmaller:(id)sender {
+  [mdDelegate makeTextSmaller:[textView textStorage]];
+}
+
+- (void)makeTextStandardSize:(id)sender {
+  [mdDelegate resetTextSize:[textView textStorage]];
+}
+
 @end

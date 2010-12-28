@@ -65,34 +65,39 @@ static NSString *emptyType = @"empty";
 @synthesize attachmentChar;
 @synthesize baseURL;
 
-- (void)awakeFromNib {
-  [text textStorage].delegate = self;
+- (void) configureTextStyles {
 
-  references = [[NSMutableDictionary alloc] init];
-  newReferences = false;
-
-  MarkdownCodeSection = @"MarkdownCodeSection";
-
-  NSMutableParagraphStyle *ps;
-//  ps = [[NSMutableParagraphStyle alloc] init];
-//  [ps setHeadIndent:28];
-//  [ps setFirstLineHeadIndent:16];
-//  [ps setTailIndent:-28];
-  blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-//					  ps, NSParagraphStyleAttributeName,
-						[NSFont fontWithName:@"Times-Italic" size:16], NSFontAttributeName,
-					nil
-      ] retain];
+  int lineHeight = 1.5 * baseFontSize;
+  if (defaultStyle == nil) {
+    defaultStyle = [[NSMutableParagraphStyle alloc] init];
+  }
+  [defaultStyle setMinimumLineHeight:lineHeight];
+  [defaultStyle setMaximumLineHeight:lineHeight];
 
   NSColor *grey = [NSColor lightGrayColor];
-  NSFont *normal = [NSFont fontWithName:@"Times" size:16]; //[NSFont userFontOfSize:14];
+  NSFont *normal = [NSFont fontWithName:@"Times" size:baseFontSize]; //[NSFont userFontOfSize:14];
+
+  defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
+				       defaultStyle, NSParagraphStyleAttributeName,
+				     normal, NSFontAttributeName,
+				     nil
+      ] retain];
+
+  NSMutableParagraphStyle *ps;
+
+//  ps = [defaultStyle mutableCopy];
+  blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
+					  defaultStyle, NSParagraphStyleAttributeName,
+						[NSFont fontWithName:@"Times-Italic" size:baseFontSize], NSFontAttributeName,
+					nil
+      ] retain];
 
   metaAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 				    grey, NSForegroundColorAttributeName,
 				  nil
       ] retain];
 
-  ps = [[NSMutableParagraphStyle alloc] init];
+  ps = [defaultStyle mutableCopy];
   [ps setLineBreakMode:NSLineBreakByTruncatingTail];
   codeAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
 			     [NSColor colorWithCalibratedWhite:0.95 alpha:1.0], NSBackgroundColorAttributeName,
@@ -109,38 +114,42 @@ static NSString *emptyType = @"empty";
 				nil
       ] retain];
 
-  ps = [[NSMutableParagraphStyle alloc] init];
-//  int lineHeight = 20;
-//  [ps setMinimumLineHeight:lineHeight];
-//  [ps setMaximumLineHeight:lineHeight];
-//  [ps setParagraphSpacingBefore:lineHeight];
+//  ps = [defaultStyle mutableCopy];
   h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				ps, NSParagraphStyleAttributeName,
+				defaultStyle, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
 
   h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				ps, NSParagraphStyleAttributeName,
+				defaultStyle, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
 
-  ps = [[NSMutableParagraphStyle alloc] init];
-//  [ps setMaximumLineHeight:12];
-  blankAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				     ps, NSParagraphStyleAttributeName,
-				   nil
+  ps = [defaultStyle mutableCopy];
+  [ps setAlignment:NSCenterTextAlignment];
+  hrAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
+				  ps, NSParagraphStyleAttributeName,
+				normal, NSFontAttributeName,
+				nil
       ] retain];
+}
 
-  ps = [[NSMutableParagraphStyle alloc] init];
-//  [ps setMinimumLineHeight:lineHeight];
-//  [ps setMaximumLineHeight:lineHeight];
-  defaultAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				       ps, NSParagraphStyleAttributeName,
-				     normal, NSFontAttributeName,
-				     nil
-      ] retain];
+- (void)awakeFromNib {
+  baseFontSize = 16;
+
+  [text textStorage].delegate = self;
+
+  NSSize size = {24, 24};
+  [text setTextContainerInset:size];
+
+  references = [[NSMutableDictionary alloc] init];
+  newReferences = false;
+
+  MarkdownCodeSection = @"MarkdownCodeSection";
+
+  [self configureTextStyles];
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
   attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
@@ -173,7 +182,7 @@ static NSString *emptyType = @"empty";
   (?<delimchar>[*_`])  \
   \\k<delimchar>?      \
 )                      \
-(?<content>\\S.+?\\S|\\S+?) \
+(?<content>(\\S.+\\S|\\S+)) \
 (?<end_delimiter>      \
   (?<!\\\\)            \
   \\k<delimiter>       \
@@ -182,49 +191,39 @@ static NSString *emptyType = @"empty";
 
   linkRegex = [[OGRegularExpression alloc] initWithString:[NSString stringWithFormat:@"(?<!!|%@)\\[((?:%@|.)*?)\\]%@", attachmentChar, imageString, linkSuffix]];
 
-  ps = [[NSMutableParagraphStyle alloc] init];
-//  [ps setMinimumLineHeight:lineHeight];
-//  [ps setMaximumLineHeight:lineHeight];
-  [ps setAlignment:NSCenterTextAlignment];
-  hrAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				  ps, NSParagraphStyleAttributeName,
-				normal, NSFontAttributeName,
-				nil
-      ] retain];
-
   hrRegexp = [OGRegularExpression regularExpressionWithString:@"^([\\t ]{,3}([-*])(?:[\\t ]*\\2){2,}[\\t ]*)$"];
 
   blocks = [[NSDictionary alloc] initWithObjectsAndKeys:
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
-						   headerType, listType, nil], listType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*)$"],
-						   nil], refType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(#+)\\s+[^#]*(#*)"],
-						   nil], headerType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^>\\s+"],
-						   headerType, listType, quoteType, nil], quoteType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^ {4}"],
-						    nil], codeType,
-					  [NSArray arrayWithObjects:hrRegexp,
-						    nil], hrType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^(?=.)"],
-						    nil], plainType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^[^\n\\S]+"],
-						    nil], indentType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^$"],
-						    nil], emptyType,
-					  [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
-											   @"^([-=])\\1*\\s*$"],
-						    nil], setexMarkerType,
-				       nil];
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                                                   @"^(?:\\d+\\.\\s+|\\*\\s+)"],
+                                       headerType, listType, nil], listType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                                     @"^(\\s*\\[(.+?)\\]:\\s*(\\S+)\\s*(\\\".+?\\\")?\\s*)$"],
+                                       nil], refType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^(#+)\\s+[^#]*(#*)"],
+                                       nil], headerType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^>\\s+"],
+                                       headerType, listType, quoteType, nil], quoteType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^ {4}"],
+                                       nil], codeType,
+                              [NSArray arrayWithObjects:hrRegexp,
+                                       nil], hrType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^(?=.)"],
+                                       nil], plainType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^[^\n\\S]+"],
+                                       listType, nil], indentType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^$"],
+                                       nil], emptyType,
+                              [NSArray arrayWithObjects:[OGRegularExpression regularExpressionWithString:
+                                                                               @"^([-=])\\1*\\s*$"],
+                                       nil], setexMarkerType,
+                                 nil];
 
   // setex = /^([-=])\1*\s*$/
   setex = [[OGRegularExpression alloc] initWithString:@"^([-=])\\1*\\s*$"];
@@ -359,9 +358,9 @@ static NSString *emptyType = @"empty";
 
 - (NSDictionary *)attributesForIndentTo:(int) level leadOffset:(int) pixels {
   NSMutableParagraphStyle *ps;
-  ps = [[NSMutableParagraphStyle alloc] init];
+  ps = [defaultStyle mutableCopy];
 
-  int pointIndent = 16 + level * 16;
+  int pointIndent = baseFontSize + level * baseFontSize;
 
   [ps setHeadIndent:pointIndent];
   [ps setFirstLineHeadIndent:pointIndent - pixels];
@@ -389,11 +388,11 @@ static NSString *emptyType = @"empty";
 
 - (int)fontSizeOfString:(NSAttributedString *)string atIndex:(int)index {
   NSFont *font = [self fontOfString:string atIndex:index];
-  return (font != nil) ? [font pointSize] : 16;
+  return (font != nil) ? [font pointSize] : baseFontSize;
 }
 
 - (NSFont *)codeFontForSize:(int)size {
-  return [NSFont fontWithName:@"Inconsolata" size:16]; //[NSFont userFontOfSize:14];
+  return [NSFont fontWithName:@"Inconsolata" size:baseFontSize]; //[NSFont userFontOfSize:14];
 //  return [NSFont userFixedPitchFontOfSize:size-3];
 }
 
@@ -426,18 +425,18 @@ static NSString *emptyType = @"empty";
   int size;
   switch (level) {
     case 1:
-      size = 24;
+      size = 1.5 * baseFontSize;
       break;
     case 2:
-      size = 21;
+      size = 1.3125 * baseFontSize;
       break;
     case 3:
     case 4:
-      size = 18;
+      size = 1.125 * baseFontSize;
       break;
     case 5:
     case 6:
-      size = 16;
+      size = baseFontSize;
       break;
   }
 
@@ -620,7 +619,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 	[line addAttributes:codeAttributes range:range];
 	//	NSLog(@"Not marking code tooltip");
 //	[line addAttribute:NSToolTipAttributeName value:[line attributedSubstringFromRange:content] range:range];
-	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:16] range:content];
+	[line addAttribute:NSFontAttributeName value:[self codeFontForSize:baseFontSize] range:content];
       } else if (block.type == headerType) {
 	NSDictionary *attributes = h1Attributes;
 	NSRange suffix = NSMakeRange(NSNotFound, 0);
@@ -774,8 +773,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     }
 
     if ([[stack objectAtIndex:0] type] == setexMarkerType) {
-      NSLog(@"Setex marker of %@", [[[stack objectAtIndex:0] match] substringAtIndex:1]);
-      NSLog(@"PrevStack %@", prevStack);
+//      NSLog(@"Setex marker of %@", [[[stack objectAtIndex:0] match] substringAtIndex:1]);
+//      NSLog(@"PrevStack %@", prevStack);
   
       if ((prevStack != nil && [[prevStack objectAtIndex:0] type] != emptyType) || [[[[stack objectAtIndex:0] match] substringAtIndex:1] isEqualToString:@"="]) {
         [prevStack removeAllObjects];
@@ -788,7 +787,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       }
     }
                                                                                                
-    NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
+//    NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
     prevStack = stack;
     stack = [NSMutableArray array];
     [data addObject:stack];
@@ -817,7 +816,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   i -= 1;
   while (i >= 0) {
     prev = [data objectAtIndex:i];
-    NSLog(@"at %d type %@", i, [[prev objectAtIndex:0] type]);
+//    NSLog(@"at %d type %@", i, [[prev objectAtIndex:0] type]);
     if ([[prev objectAtIndex:0] type] != plainType) return [self bareStack:prev];
     i--; // find previous non-blank parse-line
   }
@@ -831,7 +830,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     i--;
     stack = [data objectAtIndex:i];
     iType = [[stack objectAtIndex:0] type];
-    NSLog(@"at %d type %@", i, iType);
+//    NSLog(@"at %d type %@", i, iType);
     if (iType == listType) return [NSArray arrayWithObject:[stack objectAtIndex:0]];
     else if (iType != emptyType && iType != plainType) return nil;
   }
@@ -867,7 +866,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     if (index >= 0 && index < [data count]) {
       stack = [data objectAtIndex:index];
 
-      NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
+//      NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
 
       if ([[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
         NSMutableArray *newStack = [self previousContentStack:data before:index];
@@ -883,7 +882,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
           stack = newStack;
         }
       }
-      NSLog(@"rendering as %@\n----------", stack);
+//      NSLog(@"rendering as %@\n----------", stack);
       [self markLine:string range:range stack:stack];
       index += 1;
     } else {
@@ -899,36 +898,59 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   }
 }
 
-- (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
-  NSTextStorage *storage = [aNotification object];
-  NSMutableAttributedString *string;
-  string = storage;
-  NSRange stringRange = NSMakeRange(0, [string length]);
-
-  NSRange edited = [storage editedRange];
-  edited = [self expandRangeToParagraph:edited forString:string];
-  stringRange = edited;
-
+- (void)markupString:(NSMutableAttributedString *)string inRange:(NSRange)range {
 //  NSLog(@"editing:(\n|%@|\n)", [[string attributedSubstringFromRange:edited] string]);
+  range = [self expandRangeToParagraph:range forString:string];
 
   [string beginEditing];
 
-  [string removeAttribute:NSParagraphStyleAttributeName range:stringRange];
-  [string removeAttribute:NSFontAttributeName range:stringRange];
-  [string removeAttribute:NSForegroundColorAttributeName range:stringRange];
-  [string removeAttribute:NSBackgroundColorAttributeName range:stringRange];
-  [string removeAttribute:NSKernAttributeName range:stringRange];
-  [string removeAttribute:NSToolTipAttributeName range:stringRange];
-  [string removeAttribute:MarkdownCodeSection range:stringRange];
-  [string removeAttribute:NSLinkAttributeName range:stringRange];
-  [string addAttributes:defaultAttributes range:stringRange];
+  [string removeAttribute:NSParagraphStyleAttributeName range:range];
+  [string removeAttribute:NSFontAttributeName range:range];
+  [string removeAttribute:NSForegroundColorAttributeName range:range];
+  [string removeAttribute:NSBackgroundColorAttributeName range:range];
+  [string removeAttribute:NSKernAttributeName range:range];
+  [string removeAttribute:NSToolTipAttributeName range:range];
+  [string removeAttribute:MarkdownCodeSection range:range];
+  [string removeAttribute:NSLinkAttributeName range:range];
+  [string addAttributes:defaultAttributes range:range];
 
-  NSArray *parse = [self parseRegion:stringRange in:string];
-  NSLog(@"Parsed to %@\n", parse);
-  [self markupRegion:stringRange in:string withData:parse];
+  NSArray *parse = [self parseRegion:range in:string];
+//  NSLog(@"Parsed to %@\n", parse);
+  [self markupRegion:range in:string withData:parse];
   
-  [string fixAttributesInRange:stringRange];
-  [storage endEditing];
+  [string fixAttributesInRange:range];
+  [string endEditing];  
 }
 
+- (void)markupString:(NSMutableAttributedString *)string {
+  [self markupString:string inRange:NSMakeRange(0, [string length])];
+}
+
+- (void)textStorageDidProcessEditing:(NSNotification *)aNotification {
+  NSTextStorage *storage = [aNotification object];
+  NSRange edited = [storage editedRange];
+
+  [self markupString:storage inRange:edited];
+}
+
+- (void)makeText:(NSMutableAttributedString *)string size:(int)size {
+  baseFontSize = size;
+  if (baseFontSize < 10) baseFontSize = 10;
+  [self configureTextStyles];
+  [self markupString:string];
+}
+
+- (void)makeTextLarger:(NSMutableAttributedString *)string {
+  [self makeText:string size:baseFontSize + 2];
+  [self configureTextStyles];
+  [self markupString:string];
+}
+
+- (void)makeTextSmaller:(NSMutableAttributedString *)string {
+  [self makeText:string size:baseFontSize - 2];
+}
+
+- (void)resetTextSize:(NSMutableAttributedString *)string {
+  [self makeText:string size:16];
+}
 @end
