@@ -87,7 +87,7 @@ static NSString *emptyType = @"empty";
 
 //  ps = [defaultStyle mutableCopy];
   blockquoteAttributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-					  defaultStyle, NSParagraphStyleAttributeName,
+//					  defaultStyle, NSParagraphStyleAttributeName,
 						[NSFont fontWithName:@"Times-Italic" size:baseFontSize], NSFontAttributeName,
 					nil
       ] retain];
@@ -116,13 +116,13 @@ static NSString *emptyType = @"empty";
 
 //  ps = [defaultStyle mutableCopy];
   h1Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				defaultStyle, NSParagraphStyleAttributeName,
+//				defaultStyle, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
 
   h2Attributes = [[NSDictionary dictionaryWithObjectsAndKeys:
-				defaultStyle, NSParagraphStyleAttributeName,
+//				defaultStyle, NSParagraphStyleAttributeName,
 				     [NSNumber numberWithInt:-1], NSKernAttributeName,
 				nil
       ] retain];
