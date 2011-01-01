@@ -405,14 +405,15 @@ static NSString *emptyType = @"empty";
   return [string attribute:MarkdownCodeSection atIndex:index effectiveRange:nil] != nil;
 }
 
-- (NSDictionary *)attributesForIndentTo:(int) level leadOffset:(int) pixels {
+- (NSDictionary *)attributesForIndentTo:(int) indent prefixLength:(int) prefix {
   NSMutableParagraphStyle *ps;
   ps = [defaultStyle mutableCopy];
 
-  int pointIndent = baseFontSize + level/2 * baseFontSize;
+  int pointIndent = indent * baseFontSize;
+  int prefixWidth = prefix * baseFontSize;
 
   [ps setHeadIndent:pointIndent];
-  [ps setFirstLineHeadIndent:pointIndent - pixels];
+  [ps setFirstLineHeadIndent:pointIndent - prefixWidth];
 //  [ps setTailIndent:-pointIndent];
   return [NSDictionary dictionaryWithObject:ps forKey:NSParagraphStyleAttributeName];
 }
@@ -428,7 +429,7 @@ static NSString *emptyType = @"empty";
     }
   }
 
-  if (level > 0) [string addAttributes:[self attributesForIndentTo:level leadOffset:8 * prefixTotal] range:range];
+  if (level > 0) [string addAttributes:[self attributesForIndentTo:level prefixLength:prefixTotal] range:range];
 }
 
 - (NSFont *)fontOfString:(NSAttributedString *)string atIndex:(int)index {
