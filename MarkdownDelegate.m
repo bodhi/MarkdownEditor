@@ -993,8 +993,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 - (void)makeTextLarger:(NSMutableAttributedString *)string {
   [self makeText:string size:baseFontSize + 2];
-  [self configureTextStyles];
-  [self markupString:string];
 }
 
 - (void)makeTextSmaller:(NSMutableAttributedString *)string {
