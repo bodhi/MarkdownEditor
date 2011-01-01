@@ -235,6 +235,20 @@ static NSString *emptyType = @"empty";
 
   mainOrder = [[NSArray alloc] initWithObjects:setexMarkerType, hrType, refType, headerType, quoteType, listType, indentType, emptyType, plainType, nil];
   lineBlocks = [[NSArray alloc] initWithObjects:hrType, refType, headerType, setexType, nil];
+
+  // Add single space to force setting default attributes on new document
+  NSTextStorage *storage = [text textStorage];
+  if ([storage length] == 0) {
+    NSMutableAttributedString *s = [[NSMutableAttributedString alloc] initWithString:@" "];
+    [storage beginEditing];
+    [storage appendAttributedString:s];
+    [storage endEditing];
+    [s release];
+    NSRange r = {0,1};
+    [storage beginEditing];
+    [storage deleteCharactersInRange:r];
+    [storage endEditing];
+  }
 }
 
 - (int)attachImage:(NSURL *)url toString:(NSMutableAttributedString *)target atIndex:(int) index {
@@ -492,7 +506,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
       return (bool) (block.type != listType);
     }];
 
-  
+
 }
 
 - (void) pushParagraphBlock:(NSMutableArray *)stack block:(MDBlock *)newBlock {
@@ -704,7 +718,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     next.length = [haystack length] - next.location;
     next = [haystack rangeOfString:needle options:0 range:next];
   }
-  
+
   // Add one to get to the middle of \n\n, ie. the start of the blank
   // line, not the end of the previous paragraph
   range.location = prev.location == NSNotFound ? 0 : prev.location + 1;
@@ -727,7 +741,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     NSRange lRange = [lineMatch rangeOfMatchedString];
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
     OGRegularExpressionMatch *match;
-    
+
     indent = 0;
     // Start with the default set of types to check (mainOrder).  If
     // one matches, push that type on this line's stack of types,
@@ -775,7 +789,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     if ([[stack objectAtIndex:0] type] == setexMarkerType) {
 //      NSLog(@"Setex marker of %@", [[[stack objectAtIndex:0] match] substringAtIndex:1]);
 //      NSLog(@"PrevStack %@", prevStack);
-  
+
       if ((prevStack != nil && [[prevStack objectAtIndex:0] type] != emptyType) || [[[[stack objectAtIndex:0] match] substringAtIndex:1] isEqualToString:@"="]) {
         [prevStack removeAllObjects];
         [self pushParagraphBlock:prevStack block:[MDBlock blockWithType:setexType indent:0 prefix:0 match:match]];
@@ -786,7 +800,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
         [stack replaceObjectAtIndex:0 withObject:[MDBlock blockWithType:plainType indent: 0 prefix:0 match:match]];
       }
     }
-                                                                                               
+
 //    NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
     prevStack = stack;
     stack = [NSMutableArray array];
@@ -847,7 +861,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   if (prefix <= 0) {
     [right removeObjectAtIndex:0];
   } else {
-    [[right objectAtIndex:0] setPrefixLength:prefix];    
+    [[right objectAtIndex:0] setPrefixLength:prefix];
   }
 
   [new addObjectsFromArray:right];
@@ -857,7 +871,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 - (void)markupRegion:(NSRange) stringRange in:(NSMutableAttributedString *)string withData:(NSArray *)data {
   NSMutableArray *stack;
-  
+
   int index = 0;
 
   for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
@@ -903,7 +917,6 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   range = [self expandRangeToParagraph:range forString:string];
 
   [string beginEditing];
-
   [string removeAttribute:NSParagraphStyleAttributeName range:range];
   [string removeAttribute:NSFontAttributeName range:range];
   [string removeAttribute:NSForegroundColorAttributeName range:range];
@@ -917,9 +930,9 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   NSArray *parse = [self parseRegion:range in:string];
 //  NSLog(@"Parsed to %@\n", parse);
   [self markupRegion:range in:string withData:parse];
-  
+
   [string fixAttributesInRange:range];
-  [string endEditing];  
+  [string endEditing];
 }
 
 - (void)markupString:(NSMutableAttributedString *)string {
