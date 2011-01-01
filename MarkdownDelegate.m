@@ -60,6 +60,41 @@ static NSString *emptyType = @"empty";
 }
 @end
 
+@interface NSMutableArray (MarkEdit)
+- (id)firstObject;
+@end
+@implementation NSMutableArray (MarkEdit)
+- (id)firstObject {
+  return [self objectAtIndex:0];
+}
+@end
+
+@interface MDStack : NSObject {
+  NSRange range;
+  NSMutableArray *array;
+}
+@property(assign) NSRange range;
+@property(retain) NSMutableArray *array;
+@end
+@implementation MDStack
+@synthesize range;
+@synthesize array;
++ (id) mdStackWith:(NSMutableArray *)arr range:(NSRange)range {
+  MDStack *stack = [[MDStack alloc] init];
+  stack.array = arr;
+  stack.range = range;
+  return [stack autorelease];
+}
++ (id) mdStackWith:(NSMutableArray *)arr {
+  MDStack *stack = [[MDStack alloc] init];
+  stack.array = arr;
+  return [stack autorelease];
+}
+- (NSString *)description {
+  return [NSString stringWithFormat:@"{%d,%d}:%@", range.location, range.length, [array description]];
+}
+@end
+
 @implementation MarkdownDelegate
 @synthesize text;
 @synthesize attachmentChar;
@@ -374,12 +409,12 @@ static NSString *emptyType = @"empty";
   NSMutableParagraphStyle *ps;
   ps = [defaultStyle mutableCopy];
 
-  int pointIndent = baseFontSize + level * baseFontSize;
+  int pointIndent = baseFontSize + level/2 * baseFontSize;
 
   [ps setHeadIndent:pointIndent];
   [ps setFirstLineHeadIndent:pointIndent - pixels];
 //  [ps setTailIndent:-pointIndent];
-  return [NSDictionary dictionaryWithObject: ps forKey:NSParagraphStyleAttributeName];
+  return [NSDictionary dictionaryWithObject:ps forKey:NSParagraphStyleAttributeName];
 }
 
 - (void)indent:(NSMutableAttributedString *)string range:(NSRange) range for:(NSArray *)stack {
@@ -733,12 +768,14 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
   data = [NSMutableArray array];
   stack = [NSMutableArray array];
-  [data addObject:stack];
+  MDStack *stackInfo = [MDStack mdStackWith:stack];
+  [data addObject:stackInfo];
 
   int indent = 0;
 
   for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
     NSRange lRange = [lineMatch rangeOfMatchedString];
+    stackInfo.range = lRange;
     NSRange lineRange = NSMakeRange(lRange.location, lRange.length);
     OGRegularExpressionMatch *match;
 
@@ -804,8 +841,8 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 //    NSLog(@"Final stack on |%@|: %@", [[string attributedSubstringFromRange:lRange] string], stack);
     prevStack = stack;
     stack = [NSMutableArray array];
-    [data addObject:stack];
-
+    stackInfo = [MDStack mdStackWith:stack];
+    [data addObject:stackInfo];
   }
 
   [data removeLastObject];
@@ -826,85 +863,85 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 - (NSMutableArray *)previousContentStack:(NSArray *)data before:(int)i {
-  NSMutableArray *prev = nil;
-  i -= 1;
-  while (i >= 0) {
-    prev = [data objectAtIndex:i];
-//    NSLog(@"at %d type %@", i, [[prev objectAtIndex:0] type]);
-    if ([[prev objectAtIndex:0] type] != plainType) return [self bareStack:prev];
+  MDStack *prev = nil;
+  NSLog(@"starting at %d", i);
+  while (i > 0) {
     i--; // find previous non-blank parse-line
+    prev = [data objectAtIndex:i];
+    NSLog(@"at %d type %@", i, [[prev.array firstObject] type]);
+    if ([[prev.array firstObject] type] != plainType) return [self bareStack:prev.array];
   }
   return nil;
 }
 
 - (NSMutableArray *)previousListStack:(NSArray *)data before:(int)i {
   NSString *iType;
-  NSMutableArray *stack;
+  MDStack *stack = nil;
+  bool crossedParagraph = NO;
   while (i > 0) {
     i--;
     stack = [data objectAtIndex:i];
-    iType = [[stack objectAtIndex:0] type];
-//    NSLog(@"at %d type %@", i, iType);
-    if (iType == listType) return [NSArray arrayWithObject:[stack objectAtIndex:0]];
-    else if (iType != emptyType && iType != plainType) return nil;
+    iType = [[stack.array firstObject] type];
+    NSLog(@"at %d type %@", i, iType);
+    if (iType == listType) {
+      return [NSArray arrayWithArray:stack.array];
+    } else if (iType != emptyType && iType != plainType && iType != indentType) { // Something that can't continue a list
+      return nil;      
+    } else if (crossedParagraph && (iType != plainType || iType != listType)) {
+      // Going backwards, a plain paragraph can only continue a list directly
+      return nil;
+    } else if (iType == plainType) {
+      crossedParagraph = YES;
+    }
   }
   return nil;
 }
 
 - (NSMutableArray *)mergeIndentedStack:(NSMutableArray *)right onto:(NSArray *)left {
-  NSMutableArray *new = [NSMutableArray arrayWithArray:left];
-  int prefix = [[right objectAtIndex:0] prefixLength];
+  NSMutableArray *new = nil;
+  int prefix = [[right firstObject] prefixLength];
   for (MDBlock *block in left) {
     if (prefix < 0) break;
     prefix -= block.prefixLength;
   }
-  if (prefix <= 0) {
-    [right removeObjectAtIndex:0];
-  } else {
-    [[right objectAtIndex:0] setPrefixLength:prefix];
+  if (prefix < 0) {             // not indented as far as previous point
+    new = right;
+  } else {                      // indented past previous
+    new = [NSMutableArray arrayWithArray:left];
+    [[right firstObject] setPrefixLength:prefix];
+    [new addObjectsFromArray:right];
   }
-
-  [new addObjectsFromArray:right];
 
   return new;
 }
 
 - (void)markupRegion:(NSRange) stringRange in:(NSMutableAttributedString *)string withData:(NSArray *)data {
-  NSMutableArray *stack;
-
-  int index = 0;
-
-  for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
-
-    NSRange range = [lineMatch rangeOfMatchedString];
-    if (index >= 0 && index < [data count]) {
-      stack = [data objectAtIndex:index];
-
+//  for (OGRegularExpressionMatch *lineMatch in [[OGRegularExpression regularExpressionWithString:@"[^\\n]*\\n?"] matchEnumeratorInAttributedString:string range:stringRange]) {
+  int i = 0;
+  for (MDStack *stackInfo in data) {
+    NSMutableArray *stack = stackInfo.array;
+    NSRange range = stackInfo.range;
 //      NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
-
-      if ([[stack objectAtIndex:0] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
-        NSMutableArray *newStack = [self previousContentStack:data before:index];
-        if (newStack != nil) stack = newStack;
-      } else if ([[stack objectAtIndex:0] type] == indentType) {
-        NSMutableArray *newStack = [self previousListStack:data before:index];
-        if (newStack != nil) {
-          [self popParagraphBlocks:newStack];
-          stack = [self mergeIndentedStack:stack onto:newStack];
-        } else if ([[stack objectAtIndex:0] prefixLength] >= 4) {
-          stack = [NSArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:lineMatch]];
-        } else if ((newStack = [self previousContentStack:data before:index]) != nil) {
-          stack = newStack;
-        }
+    
+    if ([[stack firstObject] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
+      NSMutableArray *prevStack = [self previousContentStack:data before:i];
+      if (prevStack != nil) stack = prevStack;
+    } else if ([[stack firstObject] type] == indentType) {
+      NSMutableArray *prevStack = [self previousListStack:data before:i];
+      if (prevStack != nil) {
+        [self popParagraphBlocks:prevStack];
+        stack = [self mergeIndentedStack:stack onto:prevStack];
+      } else if ([[stack firstObject] prefixLength] >= 4) {
+        stack = [NSMutableArray arrayWithObject:[MDBlock blockWithType:codeType indent:0 prefix:4 match:[[stack firstObject] match]]];
+      } else if ((prevStack = [self previousContentStack:data before:i]) != nil) {
+        stack = prevStack;
       }
-//      NSLog(@"rendering as %@\n----------", stack);
-      [self markLine:string range:range stack:stack];
-      index += 1;
-    } else {
-      NSLog(@"trying to markup line with index %d when stack only has %d entries", index, [data count]);
     }
-
+//      NSLog(@"rendering as %@\n----------", stack);
+    [self markLine:string range:range stack:stack];
+    i += 1;
   }
-
+  
   if (newReferences) {
     [self markLinks:string range:NSMakeRange(0, [string length])];
     [self markImages:string range:NSMakeRange(0, [string length])];
