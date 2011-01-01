@@ -885,7 +885,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     iType = [[stack.array firstObject] type];
 //    NSLog(@"at %d type %@", i, iType);
     if (iType == listType) {
-      return [NSArray arrayWithArray:stack.array];
+      return [NSArray arrayWithObject:[stack.array firstObject]];
     } else if (iType != emptyType && iType != plainType && iType != indentType) { // Something that can't continue a list
       return nil;      
     } else if (crossedParagraph && (iType != plainType || iType != listType)) {
