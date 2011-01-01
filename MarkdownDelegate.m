@@ -865,11 +865,11 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 - (NSMutableArray *)previousContentStack:(NSArray *)data before:(int)i {
   MDStack *prev = nil;
-  NSLog(@"starting at %d", i);
+//  NSLog(@"starting at %d", i);
   while (i > 0) {
     i--; // find previous non-blank parse-line
     prev = [data objectAtIndex:i];
-    NSLog(@"at %d type %@", i, [[prev.array firstObject] type]);
+//    NSLog(@"at %d type %@", i, [[prev.array firstObject] type]);
     if ([[prev.array firstObject] type] != plainType) return [self bareStack:prev.array];
   }
   return nil;
@@ -883,7 +883,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     i--;
     stack = [data objectAtIndex:i];
     iType = [[stack.array firstObject] type];
-    NSLog(@"at %d type %@", i, iType);
+//    NSLog(@"at %d type %@", i, iType);
     if (iType == listType) {
       return [NSArray arrayWithArray:stack.array];
     } else if (iType != emptyType && iType != plainType && iType != indentType) { // Something that can't continue a list
