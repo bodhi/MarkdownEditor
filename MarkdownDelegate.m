@@ -887,7 +887,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     if (iType == listType) {
       return [NSArray arrayWithObject:[stack.array firstObject]];
     } else if (iType != emptyType && iType != plainType && iType != indentType) { // Something that can't continue a list
-      return nil;      
+      return nil;
     } else if (crossedParagraph && (iType != plainType || iType != listType)) {
       // Going backwards, a plain paragraph can only continue a list directly
       return nil;
@@ -923,7 +923,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     NSMutableArray *stack = stackInfo.array;
     NSRange range = stackInfo.range;
 //      NSLog(@"looking at |%@|  %@", [[string attributedSubstringFromRange:range] string], stack);
-    
+
     if ([[stack firstObject] type] == plainType) { // Could be lazily continued paragraph, indent according to previous stack
       NSMutableArray *prevStack = [self previousContentStack:data before:i];
       if (prevStack != nil) stack = prevStack;
@@ -942,7 +942,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
     [self markLine:string range:range stack:stack];
     i += 1;
   }
-  
+
   if (newReferences) {
     [self markLinks:string range:NSMakeRange(0, [string length])];
     [self markImages:string range:NSMakeRange(0, [string length])];
@@ -1002,4 +1002,16 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 - (void)resetTextSize:(NSMutableAttributedString *)string {
   [self makeText:string size:16];
 }
+
+// Can't use `textView:willCheckTextInRange:options:types:` as it's
+// range might span across a whole code section, so it's easier to
+// just avoid marking found errors in code sections.
+- (NSInteger)textView:(NSTextView *)textView shouldSetSpellingState:(NSInteger)value range:(NSRange)affectedCharRange {
+//  NSLog(@"Setting spelling state of %d on {%d,%d}", value, affectedCharRange.location, affectedCharRange.length);
+  if (value != 0 && [self isCodeSection:[textView textStorage] atIndex:affectedCharRange.location]) {
+    value = 0;
+  }
+  return value;
+}
+
 @end

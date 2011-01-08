@@ -265,6 +265,22 @@
 					</object>
 					<int key="connectionID">100032</int>
 				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">delegate</string>
+						<reference key="source" ref="808842977"/>
+						<reference key="destination" ref="60117756"/>
+					</object>
+					<int key="connectionID">100034</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">text</string>
+						<reference key="source" ref="60117756"/>
+						<reference key="destination" ref="808842977"/>
+					</object>
+					<int key="connectionID">100035</int>
+				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
 				<object class="NSArray" key="orderedObjects">
@@ -398,7 +414,7 @@
 				</object>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">100033</int>
+			<int key="maxID">100035</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
