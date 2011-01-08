@@ -744,6 +744,15 @@
 									<reference key="NSOnImage" ref="1033313550"/>
 									<reference key="NSMixedImage" ref="310636482"/>
 								</object>
+								<object class="NSMenuItem" id="562777843">
+									<reference key="NSMenu" ref="283061504"/>
+									<string key="NSTitle">Refresh Syntax</string>
+									<string key="NSKeyEquiv">r</string>
+									<int key="NSKeyEquivModMask">1048576</int>
+									<int key="NSMnemonicLoc">2147483647</int>
+									<reference key="NSOnImage" ref="1033313550"/>
+									<reference key="NSMixedImage" ref="310636482"/>
+								</object>
 							</object>
 							<string key="NSName">_NSFontMenu</string>
 						</object>
@@ -1229,6 +1238,14 @@
 						<reference key="destination" ref="455332062"/>
 					</object>
 					<int key="connectionID">714</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">reload:</string>
+						<reference key="source" ref="1014"/>
+						<reference key="destination" ref="562777843"/>
+					</object>
+					<int key="connectionID">716</int>
 				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -1850,6 +1867,7 @@
 							<reference ref="168493950"/>
 							<reference ref="392526281"/>
 							<reference ref="455332062"/>
+							<reference ref="562777843"/>
 						</object>
 						<reference key="parent" ref="853534954"/>
 					</object>
@@ -1866,6 +1884,11 @@
 					<object class="IBObjectRecord">
 						<int key="objectID">713</int>
 						<reference key="object" ref="455332062"/>
+						<reference key="parent" ref="283061504"/>
+					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">715</int>
+						<reference key="object" ref="562777843"/>
 						<reference key="parent" ref="283061504"/>
 					</object>
 				</object>
@@ -2030,6 +2053,7 @@
 					<string>663.IBPluginDependency</string>
 					<string>664.IBPluginDependency</string>
 					<string>713.IBPluginDependency</string>
+					<string>715.IBPluginDependency</string>
 					<string>72.IBPluginDependency</string>
 					<string>72.ImportedFromIB2</string>
 					<string>73.IBPluginDependency</string>
@@ -2210,7 +2234,8 @@
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<integer value="1"/>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
-					<string>{{552, 465}, {158, 63}}</string>
+					<string>{{552, 445}, {178, 83}}</string>
+					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
@@ -2259,7 +2284,7 @@
 				</object>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">714</int>
+			<int key="maxID">716</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptionsV3.2+">

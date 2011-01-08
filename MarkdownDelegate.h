@@ -45,6 +45,7 @@
 @property (assign) IBOutlet NSTextView *text;
 @property (retain) NSString *attachmentChar;
 @property (retain) NSURL *baseURL;
+- (void)markupString:(NSMutableAttributedString *)string;
 -(void)makeTextLarger:(NSMutableAttributedString *)string;
 -(void)makeTextSmaller:(NSMutableAttributedString *)string;
 -(void)resetTextSize:(NSMutableAttributedString *)string;

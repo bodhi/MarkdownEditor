@@ -74,4 +74,9 @@
   [mdDelegate resetTextSize:[textView textStorage]];
 }
 
+- (void)reload:(id)sender {
+  NSLog(@"reparsing");
+  [mdDelegate markupString:[textView textStorage]];
+}
+
 @end
