@@ -1013,6 +1013,26 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
   [text setTextContainerInset:size];
 }
 
+// Nicked from http://lists.apple.com/archives/cocoa-dev/2005/Jun/msg01909.html
+- (NSRange)visibleRange {
+  NSScrollView *sv = [text enclosingScrollView];
+  if(!sv) return NSMakeRange(0,0);
+  NSLayoutManager *lm = [text layoutManager];
+  NSRect visRect = [text visibleRect];
+
+  NSPoint tco = [text textContainerOrigin];
+  visRect.origin.x -= tco.x;
+  visRect.origin.y -= tco.y;
+
+  NSRange glyphRange = [lm glyphRangeForBoundingRect:visRect inTextContainer:[text textContainer]];
+  NSRange charRange = [lm characterRangeForGlyphRange:glyphRange actualGlyphRange:nil];
+  return charRange;
+}
+
+-(void)recenterOn:(NSRange)range {
+  [text scrollRangeToVisible:range];
+}
+
 // Can't use `textView:willCheckTextInRange:options:types:` as it's
 // range might span across a whole code section, so it's easier to
 // just avoid marking found errors in code sections.

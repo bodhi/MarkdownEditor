@@ -50,4 +50,7 @@
 -(void)makeTextSmaller:(NSMutableAttributedString *)string;
 -(void)resetTextSize:(NSMutableAttributedString *)string;
 -(void)setWidth:(CGFloat)width;
+
+-(NSRange)visibleRange;
+-(void)recenterOn:(NSRange)range;
 @end

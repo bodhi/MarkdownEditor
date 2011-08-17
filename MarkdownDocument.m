@@ -80,9 +80,22 @@
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)frameSize {
+  originalRange = [mdDelegate visibleRange];
   [mdDelegate setWidth:frameSize.width];
   return frameSize;
 }
 
+- (void)windowDidResize:(NSNotification *)notification {
+  [mdDelegate recenterOn:originalRange];
+}
+
+- (void)windowWillExitFullScreen:(NSNotification *)notification {
+  originalRange = [mdDelegate visibleRange];
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)notification {
+  [mdDelegate setWidth:[[notification object] frame].size.width];
+  [mdDelegate recenterOn:originalRange];
+}
 
 @end

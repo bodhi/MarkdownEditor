@@ -17,6 +17,8 @@
   NSMutableAttributedString *string;
 
   IBOutlet MarkdownDelegate *mdDelegate;
+
+  NSRange originalRange;
 }
 
 @property(retain) NSMutableAttributedString *string;
