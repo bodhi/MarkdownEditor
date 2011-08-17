@@ -176,8 +176,7 @@ static NSString *emptyType = @"empty";
 
   [text textStorage].delegate = self;
 
-  NSSize size = {24, 24};
-  [text setTextContainerInset:size];
+  [self setWidth:[text frame].size.width];
 
   references = [[NSMutableDictionary alloc] init];
   newReferences = false;
@@ -987,6 +986,7 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 - (void)makeText:(NSMutableAttributedString *)string size:(int)size {
   baseFontSize = size;
   if (baseFontSize < 10) baseFontSize = 10;
+  [self setWidth:[text frame].size.width];
   [self configureTextStyles];
   [self markupString:string];
 }
@@ -1001,6 +1001,16 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 
 - (void)resetTextSize:(NSMutableAttributedString *)string {
   [self makeText:string size:16];
+}
+
+-(void)setWidth:(CGFloat)width {
+  CGFloat inset = 1.5 * baseFontSize;
+  if (width > 38 * baseFontSize) {
+    inset = (width - 38 * baseFontSize)/2;
+  }
+
+  NSSize size = {inset, inset};
+  [text setTextContainerInset:size];
 }
 
 // Can't use `textView:willCheckTextInRange:options:types:` as it's

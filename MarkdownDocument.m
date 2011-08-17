@@ -79,4 +79,10 @@
   [mdDelegate markupString:[textView textStorage]];
 }
 
+- (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)frameSize {
+  [mdDelegate setWidth:frameSize.width];
+  return frameSize;
+}
+
+
 @end

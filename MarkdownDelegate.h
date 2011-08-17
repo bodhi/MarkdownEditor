@@ -49,4 +49,5 @@
 -(void)makeTextLarger:(NSMutableAttributedString *)string;
 -(void)makeTextSmaller:(NSMutableAttributedString *)string;
 -(void)resetTextSize:(NSMutableAttributedString *)string;
+-(void)setWidth:(CGFloat)width;
 @end
