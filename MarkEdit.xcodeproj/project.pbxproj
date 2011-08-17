@@ -17,6 +17,7 @@
 		CF426651116380530030C2BA /* MarkdownDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = CF426650116380530030C2BA /* MarkdownDelegate.m */; };
 		CF42665A116382660030C2BA /* OgreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF426659116382660030C2BA /* OgreKit.framework */; };
 		CF6CFB01116E1DC40088ACCC /* OgreKit.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = CF6CFAF2116E1D990088ACCC /* OgreKit.framework */; };
+		CFFFF3E613FC0B360062820D /* Inconsolata.otf in CopyFiles */ = {isa = PBXBuildFile; fileRef = CFFFF3E113FC09C20062820D /* Inconsolata.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CFFFF3E513FC0B2F0062820D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Fonts;
+			dstSubfolderSpec = 7;
+			files = (
+				CFFFF3E613FC0B360062820D /* Inconsolata.otf in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -103,6 +114,7 @@
 		CF426650116380530030C2BA /* MarkdownDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MarkdownDelegate.m; sourceTree = "<group>"; };
 		CF426659116382660030C2BA /* OgreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OgreKit.framework; path = /Users/bodhi/Code/cocoa/OgreKit_2_1_4/build/Debug/OgreKit.framework; sourceTree = "<absolute>"; };
 		CF6CFAE1116E1D990088ACCC /* OgreKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OgreKit.xcodeproj; path = ../OgreKit_2_1_4/OgreKit.xcodeproj; sourceTree = SOURCE_ROOT; };
+		CFFFF3E113FC09C20062820D /* Inconsolata.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Inconsolata.otf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -180,6 +192,7 @@
 		2A37F4B8FDCFA73011CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				CFFFF3E113FC09C20062820D /* Inconsolata.otf */,
 				2A37F4B9FDCFA73011CA2CEA /* Credits.rtf */,
 				8D15AC360486D014006FF6A4 /* MarkEdit-Info.plist */,
 				089C165FFE840EACC02AAC07 /* InfoPlist.strings */,
@@ -224,6 +237,7 @@
 				8D15AC300486D014006FF6A4 /* Sources */,
 				8D15AC330486D014006FF6A4 /* Frameworks */,
 				CF42664811637E500030C2BA /* CopyFiles */,
+				CFFFF3E513FC0B2F0062820D /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -397,7 +411,7 @@
 				INFOPLIST_FILE = "MarkEdit-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				PRODUCT_NAME = MarkEdit;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.6;
 			};
 			name = Debug;
 		};
@@ -416,7 +430,7 @@
 				INFOPLIST_FILE = "MarkEdit-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				PRODUCT_NAME = MarkEdit;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.6;
 			};
 			name = Release;
 		};
