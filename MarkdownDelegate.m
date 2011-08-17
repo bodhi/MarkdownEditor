@@ -216,7 +216,7 @@ static NSString *emptyType = @"empty";
   (?<delimchar>[*_`])  \
   \\k<delimchar>?      \
 )                      \
-(?<content>(\\S.+\\S|\\S+)) \
+(?<content>(\\S.+?\\S|\\S+)) \
 (?<end_delimiter>      \
   (?<!\\\\)            \
   \\k<delimiter>       \
