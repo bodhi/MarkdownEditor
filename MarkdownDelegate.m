@@ -186,7 +186,7 @@ static NSString *emptyType = @"empty";
   [self configureTextStyles];
 
   NSTextAttachment *a = [[NSTextAttachment alloc] init];
-  attachmentChar = [[NSAttributedString attributedStringWithAttachment:a] string];
+  attachmentChar = [[[NSAttributedString attributedStringWithAttachment:a] string] retain];
   [a release];
 
   NSString *urlSuffix = @"\\((\\S+?)\\s*(\\\".+?\\\")?\\)"; // 1: url, 2: title

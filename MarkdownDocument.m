@@ -39,13 +39,7 @@
 
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError
 {
-  OGRegularExpression *regex = [OGRegularExpression regularExpressionWithString:mdDelegate.attachmentChar];
-  return [[regex replaceAllMatchesInString:[textView string] withString:@""] dataUsingEncoding:NSUTF8StringEncoding];
-
-  if ( outError != NULL ) {
-    *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:unimpErr userInfo:NULL];
-  }
-  return nil;
+  return [[[textView string] stringByReplacingOccurrencesOfString:mdDelegate.attachmentChar withString:@""] dataUsingEncoding:NSUTF8StringEncoding];
 }
 
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError
