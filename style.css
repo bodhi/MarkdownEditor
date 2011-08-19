@@ -32,14 +32,18 @@ h1 a { text-decoration: none }
 h2 { font-size: 1.5em; font-weight: normal }
 h3 { text-align: center; font-weight: normal  }
 a { color: #09f; }
-.description {
+a:hover{
+  color: white;
+  background: #09f;
+}
+blockquote {
   font-size: 1.2em;
   margin-bottom: 30px;
   margin-top: 30px;
   font-style: italic;
   margin-left: 16px;
 }
-.description:before {
+blockquote p:before {
   content: "> ";
   margin-left: -16px;
 }

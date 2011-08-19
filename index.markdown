@@ -1,14 +1,15 @@
 ---
 title: bodhi/MarkdownEditor @ GitHub
+layout: default
 ---
 
 <a href="http://github.com/bodhi/MarkdownEditor"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
-# [MarkEdit](http://github.com/bodhi/MarkdownEditor) <span class="small">by [bodhi](http://github.com/bodhi)</span>
+# [MarkEdit](http://github.com/bodhi/MarkdownEditor)
 
 > A wysiwyge (what-you-see-is-what-you-get-eventually) OS X editor for Markdown documents
 
-[![Download](http://github.com/images/modules/download/zip.png)](https://github.com/downloads/bodhi/MarkdownEditor/MarkEdit%200.2.1.zip)
+[Download it](https://github.com/downloads/bodhi/MarkdownEditor/MarkEdit%200.2.1.zip).
 
 A free alpha markdown editor for OS X 10.6 that lets you preview your document as you write it, according to [Markdown syntax](http://daringfireball.net/projects/markdown/syntax)
 
