@@ -8,23 +8,47 @@
   <style type="text/css">
     body {
       margin-top: 1.0em;
-      background-color: #5e7f74;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #ffffff;
+      background-color: white;
+      font-family: Times, serif;
+      color: #black;
     }
     #container {
       margin: 0 auto;
       width: 700px;
     }
-    h1 { font-size: 3.8em; color: #a1808b; margin-bottom: 3px; }
+    h1 { 
+    font-size: 2em; 
+    font-weight: normal;
+    letter-spacing: -1px;
+    margin-bottom: 3px;
+    }
+    :before {
+      font-size: 16px;
+      color: #b8b8b8;
+      font-family: monospace;
+      font-style: normal;
+    }
+    h1:before, h2:before, h3:before {
+      content: "# ";
+    }
     h1 .small { font-size: 0.4em; }
     h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #a1808b; }
-    h3 { text-align: center; color: #a1808b; }
-    a { color: #a1808b; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
+    h2 { font-size: 1.5em; font-weight: normal }
+    h3 { text-align: center; font-weight: normal  }
+    a { color: #09f; }
+    .description { 
+    font-size: 1.2em; 
+    margin-bottom: 30px; 
+    margin-top: 30px; 
+    font-style: italic; 
+    margin-left: 16px;
+    }
+    .description:before {
+    content: "> ";
+    margin-left: -16px;
+    }
     .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
+    pre { background: #f5f5f5; color: #black; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
   </style>
@@ -36,30 +60,34 @@
   <div id="container">
 
     <div class="download">
+      <a href="https://github.com/downloads/bodhi/MarkdownEditor/MarkEdit%200.2.1.zip">
+        <img alt="download" border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
       <a href="http://github.com/bodhi/MarkdownEditor/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
+        <img alt="download source as ZIP file" border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
       <a href="http://github.com/bodhi/MarkdownEditor/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
+        <img alt="download source tarball" border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
     </div>
 
     <h1><a href="http://github.com/bodhi/MarkdownEditor">MarkEdit</a>
       <span class="small">by <a href="http://github.com/bodhi">bodhi</a></span></h1>
 
     <div class="description">
-      A wysiwyge (what-you-see-is-what-you-get-eventually) editor for Markdown documents
+      A wysiwyge (what-you-see-is-what-you-get-eventually) OS X editor for Markdown documents
     </div>
 
     <p>A free alpha markdown editor for OS X 10.6 that lets you preview your document as you write it, according to [Markdown syntax](http://daringfireball.net/projects/markdown/syntax)</p><h2>Dependencies</h2>
 <p>OgreKit</p>
-<h2>Install</h2>
-<p>Download here.</p>
 <h2>Authors</h2>
-<p>bodhi (markdown@keshiki.net)<br/><br/>      </p>
+<p><a href="mailto:markdown@keshiki.net">bodhi</a></p>
 <h2>Contact</h2>
-<p>Bodhi (markdown@keshiki.net)<br/>[Twitter](http://twitter.com/#!/bodhi)<br/><br/>      </p>
+<p>Bodhi:<br><a href="mailto:markdown@keshiki.net">Email</a><br/><a href="http://twitter.com/#!/bodhi">Twitter</a><br/> </p>
 
 
     <h2>Download</h2>
+    <p>
+      <a href="https://github.com/downloads/bodhi/MarkdownEditor/MarkEdit%200.2.1.zip">
+        Download the application
+      </a>
     <p>
       You can download this project in either
       <a href="http://github.com/bodhi/MarkdownEditor/zipball/master">zip</a> or
