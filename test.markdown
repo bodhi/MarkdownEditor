@@ -1,10 +1,10 @@
 ---
-bodhi/MarkdownEditor @ GitHub
+title: bodhi/MarkdownEditor @ GitHub
 ---
 
 <a href="http://github.com/bodhi/MarkdownEditor"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
-# [MarkEdit](http://github.com/bodhi/MarkdownEditor) <span class="small">by [bodhi](http://github.com/bodhi)
+# [MarkEdit](http://github.com/bodhi/MarkdownEditor) <span class="small">by [bodhi](http://github.com/bodhi)</span>
 
 > A wysiwyge (what-you-see-is-what-you-get-eventually) OS X editor for Markdown documents
 
@@ -34,6 +34,6 @@ You can download the code in either [zip](http://github.com/bodhi/MarkdownEditor
 
 You can also clone the project with [Git](http://git-scm.com) by running:
 
-    $ git clone git://github.com/bodhi/MarkdownEditor</pre>
+    $ git clone git://github.com/bodhi/MarkdownEditor
 
 Get the source code on GitHub : [bodhi/MarkdownEditor](http://github.com/bodhi/MarkdownEditor)
