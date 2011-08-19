@@ -31,4 +31,4 @@ Things to work on
 
 ---
 
-Thanks for your interest in this project!
+Thanks for your interest in this project! To contact me, send me a message on GitHub, [on Twitter](http://twitter.com/bodhi) or [send me an email](mailto:markdown@keshiki.net)

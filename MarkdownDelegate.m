@@ -1004,12 +1004,12 @@ typedef bool (^blockCheckFn)(MDBlock *bl);
 }
 
 -(void)setWidth:(CGFloat)width {
-  CGFloat inset = 1.5 * baseFontSize;
-  if (width > 38 * baseFontSize) {
-    inset = (width - 38 * baseFontSize)/2;
+  CGFloat inset = (width - 38 * baseFontSize)/2;
+  if (inset < 1.5 * baseFontSize) {
+    inset = 1.5 * baseFontSize;
   }
 
-  NSSize size = {inset, inset};
+  NSSize size = {inset, 2 * baseFontSize};
   [text setTextContainerInset:size];
 }
 
